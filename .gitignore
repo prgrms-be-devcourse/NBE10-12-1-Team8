@@ -1,0 +1,40 @@
+# macOS
+.DS_Store
+
+# IntelliJ IDEA / JetBrains
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# VS Code
+.vscode/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Frontend / Node
+node_modules/
+dist/
+coverage/
+.next/
+.nuxt/
+.vite/
+
+# Package manager caches
+.npm/
+.yarn/
+.pnpm-store/
+
+# Gradle / Spring Boot
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
