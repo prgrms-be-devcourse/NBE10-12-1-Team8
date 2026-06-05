@@ -18,6 +18,7 @@ public class AdminProductService {
     }
 
     public void delete(Long id) {
+        findById(id); // 존재하지 않으면 IllegalArgumentException → 404
         productRepository.deleteById(id);
     }
 
