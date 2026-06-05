@@ -20,7 +20,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-public class ApiV1ProductControllerTest {
+public class AdminProductControllerTest {
 
     @Autowired
     private MockMvc mvc;
