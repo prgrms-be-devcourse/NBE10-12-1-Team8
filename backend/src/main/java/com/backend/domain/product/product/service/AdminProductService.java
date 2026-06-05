@@ -5,6 +5,8 @@ import com.backend.domain.product.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class AdminProductService {
@@ -29,9 +31,10 @@ public class AdminProductService {
         return productRepository.save(product);
     }
 
-    public void deleteAll() {
-        productRepository.deleteAll();
+    public List<Product> findAll(){
+        return productRepository.findAll();
     }
+
 
 
 
