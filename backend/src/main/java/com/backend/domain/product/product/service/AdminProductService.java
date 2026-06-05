@@ -22,7 +22,8 @@ public class AdminProductService {
     }
 
     public Product findById(Long id) {
-        return productRepository.findById(id).orElseThrow();
+        return productRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + id));
     }
 
     public Product modify(Long id, String name, int price, String description, String imageUrl) {
