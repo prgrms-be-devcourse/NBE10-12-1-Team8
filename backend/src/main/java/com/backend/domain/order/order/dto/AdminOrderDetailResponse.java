@@ -14,7 +14,7 @@ public record AdminOrderDetailResponse(
         String orderAt,
         String status,
         int totalPrice,
-        List<ItemResponse> items
+        List<AdminOrderItemResponse> items
 ) {
     public static AdminOrderDetailResponse from(Order order) {
         return new AdminOrderDetailResponse(
@@ -27,20 +27,20 @@ public record AdminOrderDetailResponse(
                 order.getStatus().name(),
                 order.calculateTotalPrice(),
                 order.getOrderItems().stream()
-                        .map(ItemResponse::from)
+                        .map(AdminOrderItemResponse::from)
                         .toList()
         );
     }
 
-    public record ItemResponse(
+    public record AdminOrderItemResponse(
             Long productId,
             String productName,
             int quantity,
             int orderPrice,
             int totalPrice
     ) {
-        public static ItemResponse from(OrderItem orderItem) {
-            return new ItemResponse(
+        public static AdminOrderItemResponse from(OrderItem orderItem) {
+            return new AdminOrderItemResponse(
                     orderItem.getProduct().getId(),
                     orderItem.getProduct().getName(),
                     orderItem.getQuantity(),
