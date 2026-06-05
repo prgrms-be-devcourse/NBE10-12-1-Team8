@@ -1,5 +1,6 @@
 package com.backend.global.initData;
 
+import com.backend.domain.order.order.dto.OrderItemRequest;
 import com.backend.domain.order.order.service.OrderService;
 import com.backend.domain.product.product.entity.Product;
 import com.backend.domain.product.product.service.ProductService;
@@ -52,14 +53,14 @@ public class BaseInitData {
         Product p3 = products.get(2); // 케냐 AA
         Product p4 = products.get(3); // 브라질 산토스
 
-        // bean@test.com — 주문 2건 (다음날 배송 배치 묶음 테스트용)
+        // bean@test.com — 주문 2건 (다른 주소로 유니크 제약 충족)
         orderService.create("bean@test.com", "서울 강남구 테헤란로 123", "06234",
                 List.of(
                         new OrderItemRequest(p1.getId(), 2),
                         new OrderItemRequest(p2.getId(), 1)
                 )
         );
-        orderService.create("bean@test.com", "서울 강남구 테헤란로 123", "06234",
+        orderService.create("bean@test.com", "서울 마포구 홍대로 100", "03920",
                 List.of(
                         new OrderItemRequest(p3.getId(), 1)
                 )
