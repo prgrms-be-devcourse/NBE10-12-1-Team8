@@ -52,7 +52,7 @@ public class Order extends BaseEntity {
         this.address = address;
         this.zipcode = zipcode;
         this.orderedAt = orderedAt;
-        this.status = OrderStatus.ORDERD;
+        this.status = OrderStatus.ORDERED;
     }
 
     public void addUpdateOrderItem(Product product, int quantity){
