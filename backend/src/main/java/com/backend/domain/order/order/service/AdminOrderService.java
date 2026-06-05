@@ -1,6 +1,7 @@
 package com.backend.domain.order.order.service;
 
 import com.backend.domain.order.order.entity.Order;
+import com.backend.domain.order.order.entity.OrderStatus;
 import com.backend.domain.order.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,12 +29,13 @@ public class AdminOrderService {
     }
     public Order updateShipped(Long id) {
         Order order = findById(id);
-        // TODO: order.updateStatus(OrderStatus.SHIPPED);
+        order.updateStatus(OrderStatus.SHIPPED);
         return orderRepository.save(order);
     }
 
     public List<Order> updateBulkShipped(List<Long> ids) {
-        // TODO: 각 id별로 updateShipped 호출
-        return List.of();
+        return ids.stream()
+                .map(this::updateShipped)
+                .toList();
     }
 }
