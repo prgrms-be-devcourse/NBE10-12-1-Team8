@@ -1,8 +1,8 @@
 package com.backend.global.initData;
 
-import com.backend.domain.order.service.OrderService;
-import com.backend.domain.product.entity.Product;
-import com.backend.domain.product.service.ProductService;
+import com.backend.domain.order.order.service.OrderService;
+import com.backend.domain.product.product.entity.Product;
+import com.backend.domain.product.product.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationRunner;
