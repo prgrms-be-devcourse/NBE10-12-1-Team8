@@ -42,9 +42,8 @@ public class OrderItem extends BaseEntity {
     }
 
     public boolean isSameProduct(Product product){
-        return this.product.getId() == product.getId();
+        return this.product.getId().equals(product.getId());
     }
-
     public int calculateTotalPrice(){
         return product.getPrice() * quantity;
     }
