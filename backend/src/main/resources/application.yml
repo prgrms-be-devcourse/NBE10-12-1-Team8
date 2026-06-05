@@ -9,4 +9,4 @@ server:
   port: 8080
 
 springdoc:
-  paths-to-match: /api/admin/products/**
+  paths-to-match: /api/**
