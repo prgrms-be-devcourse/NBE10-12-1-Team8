@@ -2,6 +2,7 @@ package com.backend.domain.order.order.service;
 
 import com.backend.domain.order.order.dto.OrderItemRequest;
 import com.backend.domain.order.order.entity.Order;
+import com.backend.domain.order.order.entity.OrderStatus;
 import com.backend.domain.order.order.repository.OrderRepository;
 import com.backend.domain.product.product.entity.Product;
 import com.backend.domain.product.product.repository.ProductRepository;
@@ -37,6 +38,19 @@ public class OrderService {
             order.addUpdateOrderItem(product, item.quantity());
         }
         return orderRepository.save(order);
+    }
+
+    public Order findById(Long id) {
+        return orderRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("주문을 찾을 수 없습니다: " + id));
+    }
+
+    public void cancel(Long id) {
+        Order order = findById(id);
+        if (order.getStatus() == OrderStatus.SHIPPED) {
+            throw new IllegalStateException("이미 배송된 주문은 취소할 수 없습니다.");
+        }
+        orderRepository.delete(order);
     }
 
     public long count() {

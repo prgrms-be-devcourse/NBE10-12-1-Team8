@@ -1,6 +1,7 @@
 package com.backend.domain.order.order.service;
 
 import com.backend.domain.order.order.entity.Order;
+import com.backend.domain.order.order.entity.OrderStatus;
 import com.backend.domain.order.order.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,16 @@ public class AdminOrderService {
         return orderRepository.findAll();
     }
 
+    public List<Order> findAll(String status, String keyword) {
+        return orderRepository.findAll().stream()
+                .filter(order -> status == null || status.isBlank()
+                        || order.getStatus().name().equalsIgnoreCase(status))
+                .filter(order -> keyword == null || keyword.isBlank()
+                        || order.getEmail().contains(keyword)
+                        || order.getAddress().contains(keyword))
+                .toList();
+    }
+
     public List<Order> findTodayOrders() {
         LocalDate today = LocalDate.now();
         return orderRepository.findAll().stream()
@@ -28,12 +39,13 @@ public class AdminOrderService {
     }
     public Order updateShipped(Long id) {
         Order order = findById(id);
-        // TODO: order.updateStatus(OrderStatus.SHIPPED);
+        order.updateStatus(OrderStatus.SHIPPED);
         return orderRepository.save(order);
     }
 
     public List<Order> updateBulkShipped(List<Long> ids) {
-        // TODO: 각 id별로 updateShipped 호출
-        return List.of();
+        return ids.stream()
+                .map(this::updateShipped)
+                .toList();
     }
 }
