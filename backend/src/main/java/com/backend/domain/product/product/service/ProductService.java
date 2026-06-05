@@ -2,7 +2,6 @@ package com.backend.domain.product.product.service;
 
 import com.backend.domain.product.product.entity.Product;
 import com.backend.domain.product.product.repository.ProductRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -19,7 +18,7 @@ public class ProductService {
 
     public Product findById(Long id) {
         return productRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("상품을 찾을 수 없습니다: " + id));
+                .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + id));
     }
 
     public long count() {

@@ -1,3 +1,6 @@
+# Serena MCP (local tool, not part of project)
+.serena/
+
 # macOS
 .DS_Store
 
