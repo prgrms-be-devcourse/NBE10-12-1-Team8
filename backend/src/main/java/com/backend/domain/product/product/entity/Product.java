@@ -23,9 +23,6 @@ public class Product extends BaseEntity{
     @Column(length = 500)
     private String imageUrl;
 
-    @Column(nullable = false)
-    private boolean soldOut;
-
     public Product(String name, int price, String description, String imageUrl){
         this.name = name;
         this.price = price;
@@ -33,19 +30,10 @@ public class Product extends BaseEntity{
         this.imageUrl = imageUrl;
     }
 
-    public void modify(String name, int price, String description, String imageUrl, boolean soldOut){
+    public void modify(String name, int price, String description, String imageUrl){
         this.name = name;
         this.price = price;
         this.description = description;
         this.imageUrl = imageUrl;
-        this.soldOut = soldOut;
-    }
-
-    public void markSoldOut(){
-        this.soldOut = true;
-    }
-
-    public void markOnSale(){
-        this.soldOut = false;
     }
 }

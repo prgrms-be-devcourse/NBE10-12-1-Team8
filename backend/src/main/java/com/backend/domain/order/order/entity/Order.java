@@ -37,7 +37,7 @@ public class Order extends BaseEntity {
     private String zipcode;
 
     @Column(nullable = false)
-    private LocalDateTime orderedAt;
+    private LocalDateTime orderAt;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -46,12 +46,12 @@ public class Order extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    public Order(String email, LocalDateTime shippingDate, String address, String zipcode, LocalDateTime orderedAt){
+    public Order(String email, LocalDateTime shippingDate, String address, String zipcode, LocalDateTime orderAt){
         this.email =  email;
         this.shippingDate = shippingDate;
         this.address = address;
         this.zipcode = zipcode;
-        this.orderedAt = orderedAt;
+        this.orderAt = orderAt;
         this.status = OrderStatus.ORDERED;
     }
 
