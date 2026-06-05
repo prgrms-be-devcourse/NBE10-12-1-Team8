@@ -96,7 +96,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-01: 관리자 주문 목록 조회 성공")
-    void getOrders() throws Exception {
+    void t1() throws Exception {
         mvc.perform(get("/api/admin/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
@@ -110,7 +110,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-02: status, keyword 파라미터가 있어도 주문 목록 조회 성공")
-    void getOrders_withParams() throws Exception {
+    void t2() throws Exception {
         mvc.perform(get("/api/admin/orders")
                         .param("status", "ORDERED")
                         .param("keyword", "today@test.com"))
@@ -122,7 +122,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-03: 오늘 처리 주문 조회 성공")
-    void getTodayOrders() throws Exception {
+    void t3() throws Exception {
         mvc.perform(get("/api/admin/orders/today"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
@@ -133,7 +133,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-04: 주문 상세 조회 성공")
-    void getOrder() throws Exception {
+    void t4() throws Exception {
         mvc.perform(get("/api/admin/orders/" + todayOrderId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
@@ -153,7 +153,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-05: 단건 배송 완료 처리 성공")
-    void shipOrder() throws Exception {
+    void t5() throws Exception {
         mvc.perform(put("/api/admin/orders/" + todayOrderId + "/shipped"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
@@ -164,7 +164,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-06: 일괄 배송 완료 처리 성공")
-    void shipOrders() throws Exception {
+    void t6() throws Exception {
         String requestBody = """
                 {
                     "orderIds": [%d, %d]
@@ -184,7 +184,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-07: 이미 배송 완료된 주문도 배송 완료 요청 시 200")
-    void shipOrder_alreadyShipped() throws Exception {
+    void t7() throws Exception {
         mvc.perform(put("/api/admin/orders/" + shippedOrderId + "/shipped"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
@@ -193,7 +193,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-08: 존재하지 않는 주문 상세 조회 시 500")
-    void getOrder_notFound() throws Exception {
+    void t8() throws Exception {
         mvc.perform(get("/api/admin/orders/999999"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.resultCode").value("500"))
@@ -202,7 +202,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-09: 존재하지 않는 주문 배송 완료 처리 시 500")
-    void shipOrder_notFound() throws Exception {
+    void t9() throws Exception {
         mvc.perform(put("/api/admin/orders/999999/shipped"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.resultCode").value("500"))
@@ -211,7 +211,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-10: 일괄 배송 요청에 존재하지 않는 주문이 포함되면 500")
-    void shipOrders_containsNotFoundOrder() throws Exception {
+    void t10() throws Exception {
         String requestBody = """
                 {
                     "orderIds": [%d, 999999]
@@ -227,7 +227,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-11: 잘못된 HTTP 메서드로 요청 시 500")
-    void wrongHttpMethod() throws Exception {
+    void t11() throws Exception {
         mvc.perform(post("/api/admin/orders/" + todayOrderId + "/shipped"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.resultCode").value("500"));
@@ -235,7 +235,7 @@ public class AdminOrderControllerTest {
 
     @Test
     @DisplayName("A-12: 주문 id 타입이 숫자가 아니면 500")
-    void invalidPathVariableType() throws Exception {
+    void t12() throws Exception {
         mvc.perform(get("/api/admin/orders/not-number"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.resultCode").value("500"));
