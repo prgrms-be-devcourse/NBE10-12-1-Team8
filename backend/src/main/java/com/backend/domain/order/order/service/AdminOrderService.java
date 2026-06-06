@@ -24,7 +24,8 @@ public class AdminOrderService {
     public List<Order> findTodayOrders() {
         LocalDate today = LocalDate.now();
         return orderRepository.findAll().stream()
-                .filter(order -> order.getShippingDate().toLocalDate().equals(today))
+                .filter(order -> order.getStatus() == OrderStatus.ORDERED)
+                .filter(order -> !order.getShippingDate().toLocalDate().isAfter(today))
                 .toList();
     }
     public Order updateShipped(Long id) {
