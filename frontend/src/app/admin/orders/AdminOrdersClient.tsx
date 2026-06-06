@@ -29,6 +29,10 @@ function getStatusLabel(status: OrderStatus) {
   return status === "SHIPPED" ? "배송완료" : "주문완료";
 }
 
+function getShippingButtonLabel(status: OrderStatus) {
+  return status === "SHIPPED" ? "처리 완료" : "배송 처리";
+}
+
 function StatusBadge({ status }: Pick<AdminOrderResponse, "status">) {
   const isShipped = status === "SHIPPED";
 
@@ -156,7 +160,7 @@ function DetailModal({
             disabled={order.status === "SHIPPED" || isProcessing}
             onClick={() => onShip(order.id)}
           >
-            배송완료 처리
+            {getShippingButtonLabel(order.status)}
           </button>
         </footer>
       </section>
@@ -447,7 +451,7 @@ export function AdminOrdersClient() {
           disabled={selectedOrderIds.length === 0 || isProcessing}
           onClick={() => void completeBulkShipping()}
         >
-          선택 배송완료
+          선택 배송 처리
         </button>
       </div>
 
@@ -517,7 +521,7 @@ export function AdminOrdersClient() {
                       disabled={order.status === "SHIPPED" || isProcessing}
                       onClick={() => void completeSingleShipping(order.id)}
                     >
-                      배송완료
+                      {getShippingButtonLabel(order.status)}
                     </button>
                   </div>
                 </td>
