@@ -23,8 +23,8 @@ public class OrderService {
         LocalDateTime cutoff = now.toLocalDate().atTime(14, 0);
 
         LocalDateTime shippingDate = now.isBefore(cutoff)
-                ? now.toLocalDate().plusDays(1).atStartOfDay()
-                : now.toLocalDate().plusDays(2).atStartOfDay();
+                ? now.toLocalDate().atStartOfDay()
+                : now.toLocalDate().plusDays(1).atStartOfDay();
 
         return orderRepository.save(new Order(email, shippingDate, address, zipcode, now));
     }
