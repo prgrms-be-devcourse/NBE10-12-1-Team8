@@ -24,7 +24,7 @@ public class AdminOrderService {
     public List<Order> findTodayOrders() {
         LocalDate today = LocalDate.now();
         return orderRepository.findAll().stream()
-                .filter(order -> order.getStatus() == OrderStatus.ORDERED)
+                .filter(order -> isTodayWorkStatus(order.getStatus()))
                 .filter(order -> !order.getShippingDate().toLocalDate().isAfter(today))
                 .toList();
     }
@@ -34,9 +34,20 @@ public class AdminOrderService {
         return orderRepository.save(order);
     }
 
+    public Order updateStatus(Long id, String status) {
+        Order order = findById(id);
+        OrderStatus nextStatus = OrderStatus.valueOf(status);
+        order.updateStatus(nextStatus);
+        return orderRepository.save(order);
+    }
+
     public List<Order> updateBulkShipped(List<Long> ids) {
         return ids.stream()
                 .map(this::updateShipped)
                 .toList();
+    }
+
+    private boolean isTodayWorkStatus(OrderStatus status) {
+        return status != OrderStatus.DELIVERED && status != OrderStatus.CANCELED;
     }
 }

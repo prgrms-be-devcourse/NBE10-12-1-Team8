@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -128,7 +129,7 @@ public class AdminOrderControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("200"))
                 .andExpect(jsonPath("$.message").value("오늘 처리 주문 조회 성공"))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data", hasSize(2)));
+                .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(2)));
     }
 
     @Test
@@ -160,6 +161,25 @@ public class AdminOrderControllerTest {
                 .andExpect(jsonPath("$.message").value("배송 완료 처리 성공"))
                 .andExpect(jsonPath("$.data.id").value(todayOrderId))
                 .andExpect(jsonPath("$.data.status").value("SHIPPED"));
+    }
+
+    @Test
+    @DisplayName("A-05-1: 단건 주문 상태 변경 성공")
+    void t5_1() throws Exception {
+        String requestBody = """
+                {
+                    "status": "CONFIRMED"
+                }
+                """;
+
+        mvc.perform(patch("/api/admin/orders/" + todayOrderId + "/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200"))
+                .andExpect(jsonPath("$.message").value("주문 상태 변경 성공"))
+                .andExpect(jsonPath("$.data.id").value(todayOrderId))
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"));
     }
 
     @Test
