@@ -1,4 +1,10 @@
-export type OrderStatus = "ORDERED" | "SHIPPED";
+export type OrderStatus =
+  | "ORDERED"
+  | "CONFIRMED"
+  | "PREPARING_SHIPMENT"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELED";
 
 export type AdminOrderResponse = {
   id: number;
@@ -33,6 +39,10 @@ export type AdminOrderDetailResponse = {
 
 export type AdminOrderStatusResponse = {
   id: number;
+  status: OrderStatus;
+};
+
+export type AdminOrderStatusUpdateRequest = {
   status: OrderStatus;
 };
 
