@@ -37,10 +37,10 @@ public class BaseInitData {
     public void work1() {
         if (productService.count() > 0) return;
 
-        productService.create("에티오피아 예가체프", 32000, "꽃향과 산미가 특징인 싱글오리진 원두", "https://example.com/ethiopia.jpg");
-        productService.create("콜롬비아 수프리모", 15000, "균형 잡힌 바디감과 고소한 풍미의 원두", "https://example.com/colombia.jpg");
-        productService.create("케냐 AA", 18000, "베리류의 과일향과 밝은 산미가 특징인 원두", "https://example.com/kenya.jpg");
-        productService.create("브라질 산토스", 13000, "초콜릿과 견과류 향이 풍부한 부드러운 원두", "https://example.com/brazil.jpg");
+        productService.create("에티오피아 예가체프", 32000, "꽃향과 산미가 특징인 싱글오리진 원두", "https://images.unsplash.com/photo-1698093135407-8f50f3a52fe2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080");
+        productService.create("콜롬비아 수프리모", 15000, "균형 잡힌 바디감과 고소한 풍미의 원두", "https://images.unsplash.com/photo-1666873903780-396269c73a54?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080");
+        productService.create("케냐 AA", 18000, "베리류의 과일향과 밝은 산미가 특징인 원두", "https://images.unsplash.com/photo-1765896977022-3079fd6bce8d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080");
+        productService.create("브라질 산토스", 13000, "초콜릿과 견과류 향이 풍부한 부드러운 원두", "https://images.unsplash.com/photo-1666873975263-0c0e24c1a2f4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080");
     }
 
     @Transactional
