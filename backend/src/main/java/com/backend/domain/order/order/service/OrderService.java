@@ -8,6 +8,7 @@ import com.backend.domain.product.product.repository.ProductRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -41,5 +42,32 @@ public class OrderService {
 
     public long count() {
         return orderRepository.count();
+    }
+
+    @Transactional
+    public Order modify(
+            Long orderId,
+            String address,
+            String zipcode
+    ) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "주문을 찾을 수 없습니다 : " + orderId
+                        ));
+
+        order.modify(
+                address,
+                zipcode
+        );
+
+        return order;
+    }
+    public Order findById(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new EntityNotFoundException(
+                                "주문을 찾을 수 없습니다 : " + orderId
+                        ));
     }
 }

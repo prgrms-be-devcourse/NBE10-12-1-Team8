@@ -2,6 +2,7 @@ package com.backend.domain.order.order.controller;
 
 import com.backend.domain.order.order.dto.OrderCreateRequest;
 import com.backend.domain.order.order.dto.OrderCreateResponse;
+import com.backend.domain.order.order.dto.OrderModifyRequest;
 import com.backend.domain.order.order.entity.Order;
 import com.backend.domain.order.order.service.OrderService;
 import com.backend.global.rsData.RsData;
@@ -33,6 +34,40 @@ public class OrderController {
                 RsData.of(
                         "201",
                         "주문이 생성되었습니다.",
+                        OrderCreateResponse.from(order)
+                )
+        );
+    }
+    @PatchMapping("/{orderId}")
+    public ResponseEntity<RsData<OrderCreateResponse>> modify(
+            @PathVariable Long orderId,
+            @RequestBody OrderModifyRequest request
+    ) {
+
+        Order order = orderService.modify(
+                orderId,
+                request.address(),
+                request.zipcode()
+        );
+
+        return ResponseEntity.ok(
+                RsData.of(
+                        "200",
+                        "주문이 수정되었습니다.",
+                        OrderCreateResponse.from(order)
+                )
+        );
+    }
+    @GetMapping("/{orderId}")
+    public ResponseEntity<RsData<OrderCreateResponse>> getOrder(
+            @PathVariable Long orderId
+    ) {
+        Order order = orderService.findById(orderId);
+
+        return ResponseEntity.ok(
+                RsData.of(
+                        "200",
+                        "주문 조회 성공",
                         OrderCreateResponse.from(order)
                 )
         );
