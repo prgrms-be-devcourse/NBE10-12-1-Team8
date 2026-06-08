@@ -10,6 +10,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/orders")
@@ -34,6 +36,33 @@ public class OrderController {
                         "201",
                         "주문이 생성되었습니다.",
                         OrderCreateResponse.from(order)
+                )
+        );
+    }
+
+    @GetMapping
+    public ResponseEntity<RsData<List<Order>>> findByEmail(
+            @RequestParam String email
+    ) {
+        List<Order> orders = orderService.findByEmail(email);
+        return ResponseEntity.ok(
+                RsData.of(
+                        "200",
+                        "주문 목록 조회 성공",
+                        orders
+                )
+        );
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<RsData<Void>> deleteOrder(
+            @PathVariable Long id
+    ) {
+        orderService.cancel(id);
+        return ResponseEntity.ok(
+                RsData.of(
+                        "200",
+                        "주문이 취소되었습니다."
                 )
         );
     }
