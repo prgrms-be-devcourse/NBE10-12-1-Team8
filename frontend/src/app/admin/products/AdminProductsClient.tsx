@@ -37,6 +37,12 @@ const emptyForm: ProductFormState = {
 };
 
 const PRODUCTS_PER_PAGE = 10;
+const ALLOWED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+]);
 const IMAGE_FALLBACK_SRC =
   "data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Crect width='160' height='160' fill='%23f4f4f5'/%3E%3Ctext x='80' y='84' text-anchor='middle' font-family='sans-serif' font-size='14' fill='%23a1a1aa'%3EIMG%3C/text%3E%3C/svg%3E";
 
@@ -113,11 +119,18 @@ function ProductFormModal({
   onClose: () => void;
   onSubmit: () => void;
 }) {
+  const [isImageDragging, setIsImageDragging] = useState(false);
   const updateField = (field: keyof ProductFormState, value: string) => {
     onChange({
       ...form,
       [field]: value,
     });
+  };
+
+  const handleImageDrop = (event: React.DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsImageDragging(false);
+    onImageFileChange(event.dataTransfer.files?.[0] ?? null);
   };
 
   return (
@@ -208,32 +221,41 @@ function ProductFormModal({
               />
             </label>
 
-            <label className="flex flex-col gap-2 text-sm font-semibold">
+            <div className="flex flex-col gap-2 text-sm font-semibold">
               상품 이미지
               {errors.image && (
                 <span className="text-xs font-medium text-red-600">
                   {errors.image}
                 </span>
               )}
-              <input
-                data-product-field="image"
-                className={`h-10 rounded border px-3 py-2 text-sm font-normal outline-none file:mr-3 file:rounded file:border-0 file:bg-zinc-950 file:px-3 file:py-1 file:text-xs file:font-semibold file:text-white focus:border-zinc-950 ${
-                  errors.image ? "border-red-400" : "border-zinc-300"
+              <label
+                className={`mx-auto grid aspect-square w-full max-w-80 cursor-pointer place-items-center overflow-hidden rounded border border-dashed text-sm transition ${
+                  errors.image
+                    ? "border-red-400"
+                    : isImageDragging
+                      ? "border-zinc-950 bg-zinc-100"
+                      : "border-zinc-300 bg-zinc-50 hover:bg-zinc-100"
                 }`}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={(event) =>
-                  onImageFileChange(event.target.files?.[0] ?? null)
-                }
-              />
-              <span className="text-xs font-normal text-zinc-500">
-                jpg, png, webp, gif 파일을 업로드할 수 있습니다.
-              </span>
-            </label>
-
-            <div className="flex flex-col gap-2 text-sm font-semibold">
-              이미지 미리보기
-              <div className="mx-auto grid aspect-square w-full max-w-80 place-items-center overflow-hidden rounded border border-dashed border-zinc-300 bg-zinc-50 text-sm text-zinc-400">
+                onDragEnter={(event) => {
+                  event.preventDefault();
+                  setIsImageDragging(true);
+                }}
+                onDragOver={(event) => {
+                  event.preventDefault();
+                  setIsImageDragging(true);
+                }}
+                onDragLeave={() => setIsImageDragging(false)}
+                onDrop={handleImageDrop}
+              >
+                <input
+                  data-product-field="image"
+                  className="sr-only"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  onChange={(event) =>
+                    onImageFileChange(event.target.files?.[0] ?? null)
+                  }
+                />
                 {form.imagePreviewUrl || form.imageUrl ? (
                   <ProductImage
                     imageUrl={form.imagePreviewUrl || form.imageUrl}
@@ -242,9 +264,14 @@ function ProductFormModal({
                     fit="contain"
                   />
                 ) : (
-                  "이미지 미리보기가 여기에 표시됩니다"
+                  <span className="px-4 text-center font-normal text-zinc-500">
+                    이미지를 드래그하거나 클릭해서 선택하세요.
+                  </span>
                 )}
-              </div>
+              </label>
+              <span className="text-xs font-normal text-zinc-500">
+                jpg, png, webp, gif 파일을 업로드할 수 있습니다.
+              </span>
             </div>
           </div>
         </div>
@@ -498,6 +525,14 @@ export function AdminProductsClient() {
   };
 
   const changeImageFile = (file: File | null) => {
+    if (file && !ALLOWED_IMAGE_TYPES.has(file.type)) {
+      setFormErrors((current) => ({
+        ...current,
+        image: "jpg, png, webp, gif 이미지만 선택할 수 있습니다.",
+      }));
+      return;
+    }
+
     setFormErrors((current) => ({
       ...current,
       image: undefined,
