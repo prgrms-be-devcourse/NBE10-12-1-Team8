@@ -227,7 +227,7 @@ function DetailModal({
 
 export function AdminOrdersClient() {
   const [orders, setOrders] = useState<AdminOrderResponse[]>([]);
-  const [orderView, setOrderView] = useState<OrderView>("all");
+  const [orderView, setOrderView] = useState<OrderView>("today");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [keyword, setKeyword] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -263,7 +263,7 @@ export function AdminOrdersClient() {
 
     async function loadInitialOrders() {
       try {
-        const nextOrders = await getAdminOrders();
+        const nextOrders = await getTodayAdminOrders();
 
         if (isMounted) {
           setOrders(nextOrders);
@@ -323,31 +323,30 @@ export function AdminOrdersClient() {
     1,
     Math.ceil(filteredOrders.length / ORDERS_PER_PAGE),
   );
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
+  const boundedCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedOrders = useMemo(() => {
-    const startIndex = (currentPage - 1) * ORDERS_PER_PAGE;
+    const startIndex = (boundedCurrentPage - 1) * ORDERS_PER_PAGE;
 
     return filteredOrders.slice(startIndex, startIndex + ORDERS_PER_PAGE);
-  }, [currentPage, filteredOrders]);
+  }, [boundedCurrentPage, filteredOrders]);
 
   const pageNumbers = useMemo(() => {
-    const endPage = Math.min(totalPages, Math.max(5, currentPage + 2));
-    const startPage = Math.max(1, Math.min(currentPage - 2, endPage - 4));
+    const endPage = Math.min(totalPages, Math.max(5, boundedCurrentPage + 2));
+    const startPage = Math.max(1, Math.min(boundedCurrentPage - 2, endPage - 4));
 
     return Array.from(
       { length: endPage - startPage + 1 },
       (_, index) => startPage + index,
     );
-  }, [currentPage, totalPages]);
+  }, [boundedCurrentPage, totalPages]);
 
   const visibleStart =
-    filteredOrders.length === 0 ? 0 : (currentPage - 1) * ORDERS_PER_PAGE + 1;
+    filteredOrders.length === 0
+      ? 0
+      : (boundedCurrentPage - 1) * ORDERS_PER_PAGE + 1;
   const visibleEnd = Math.min(
-    currentPage * ORDERS_PER_PAGE,
+    boundedCurrentPage * ORDERS_PER_PAGE,
     filteredOrders.length,
   );
 
@@ -699,8 +698,12 @@ export function AdminOrdersClient() {
               <button
                 type="button"
                 className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
-                disabled={currentPage === 1}
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                disabled={boundedCurrentPage === 1}
+                onClick={() =>
+                  setCurrentPage((page) =>
+                    Math.max(1, Math.min(page, totalPages) - 1),
+                  )
+                }
               >
                 이전
               </button>
@@ -709,7 +712,7 @@ export function AdminOrdersClient() {
                   key={page}
                   type="button"
                   className={`rounded px-3 py-1.5 ${
-                    currentPage === page
+                    boundedCurrentPage === page
                       ? "bg-zinc-950 text-white"
                       : "border border-zinc-300"
                   }`}
@@ -721,9 +724,11 @@ export function AdminOrdersClient() {
               <button
                 type="button"
                 className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
-                disabled={currentPage === totalPages}
+                disabled={boundedCurrentPage === totalPages}
                 onClick={() =>
-                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                  setCurrentPage((page) =>
+                    Math.min(totalPages, Math.min(page, totalPages) + 1),
+                  )
                 }
               >
                 다음

@@ -9,6 +9,10 @@ const PUBLIC_PATHS = ["/login", "/api/admin/login"];
 export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
+    if (pathname === "/admin" || pathname === "/admin/") {
+        return NextResponse.redirect(new URL("/admin/orders", request.url));
+    }
+
     if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
         return NextResponse.next();
     }
