@@ -10,14 +10,21 @@ type RsData<T> = {
   data: T;
 };
 
+type AdminProductImageUploadResponse = {
+  imageUrl: string;
+};
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+
+  if (!(init?.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+
   const response = await fetch(path, {
     cache: "no-store",
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -35,6 +42,17 @@ export function getAdminProducts(): Promise<AdminProductResponse[]> {
 
 export function getAdminProduct(id: number): Promise<AdminProductDetailResponse> {
   return request<AdminProductDetailResponse>(`/api/admin/products/${id}`);
+}
+
+export function uploadAdminProductImage(file: File): Promise<AdminProductImageUploadResponse> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  return request<AdminProductImageUploadResponse>("/api/admin/products/images", {
+    method: "POST",
+    body: formData,
+    headers: {},
+  });
 }
 
 export function createAdminProduct(

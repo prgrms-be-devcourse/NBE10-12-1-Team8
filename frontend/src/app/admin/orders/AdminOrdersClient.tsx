@@ -17,6 +17,8 @@ import { useEffect, useMemo, useState } from "react";
 type OrderView = "all" | "today";
 type StatusFilter = "ALL" | OrderStatus;
 
+const ORDERS_PER_PAGE = 10;
+
 function formatDateTime(value: string) {
   return value.replace("T", " ").slice(0, 16);
 }
@@ -173,6 +175,7 @@ export function AdminOrdersClient() {
   const [orderView, setOrderView] = useState<OrderView>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [keyword, setKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedOrderIds, setSelectedOrderIds] = useState<number[]>([]);
   const [selectedOrderDetail, setSelectedOrderDetail] =
     useState<AdminOrderDetailResponse | null>(null);
@@ -190,6 +193,7 @@ export function AdminOrdersClient() {
 
       setOrders(nextOrders);
       setSelectedOrderIds([]);
+      setCurrentPage(1);
     } catch {
       setErrorMessage(
         "주문 목록을 불러오지 못했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
@@ -256,7 +260,39 @@ export function AdminOrdersClient() {
     });
   }, [keyword, orders, statusFilter]);
 
-  const selectableOrderIds = filteredOrders
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredOrders.length / ORDERS_PER_PAGE),
+  );
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ORDERS_PER_PAGE;
+
+    return filteredOrders.slice(startIndex, startIndex + ORDERS_PER_PAGE);
+  }, [currentPage, filteredOrders]);
+
+  const pageNumbers = useMemo(() => {
+    const endPage = Math.min(totalPages, Math.max(5, currentPage + 2));
+    const startPage = Math.max(1, Math.min(currentPage - 2, endPage - 4));
+
+    return Array.from(
+      { length: endPage - startPage + 1 },
+      (_, index) => startPage + index,
+    );
+  }, [currentPage, totalPages]);
+
+  const visibleStart =
+    filteredOrders.length === 0 ? 0 : (currentPage - 1) * ORDERS_PER_PAGE + 1;
+  const visibleEnd = Math.min(
+    currentPage * ORDERS_PER_PAGE,
+    filteredOrders.length,
+  );
+
+  const selectableOrderIds = paginatedOrders
     .filter((order) => order.status === "ORDERED")
     .map((order) => order.id);
   const isAllSelected =
@@ -267,7 +303,21 @@ export function AdminOrdersClient() {
     setOrderView(nextView);
     setStatusFilter("ALL");
     setKeyword("");
+    setCurrentPage(1);
+    setSelectedOrderIds([]);
     await loadOrders(nextView);
+  };
+
+  const changeStatusFilter = (nextStatusFilter: StatusFilter) => {
+    setStatusFilter(nextStatusFilter);
+    setCurrentPage(1);
+    setSelectedOrderIds([]);
+  };
+
+  const changeKeyword = (nextKeyword: string) => {
+    setKeyword(nextKeyword);
+    setCurrentPage(1);
+    setSelectedOrderIds([]);
   };
 
   const toggleOrder = (id: number) => {
@@ -279,7 +329,11 @@ export function AdminOrdersClient() {
   };
 
   const toggleAllOrders = () => {
-    setSelectedOrderIds(isAllSelected ? [] : selectableOrderIds);
+    setSelectedOrderIds((current) =>
+      isAllSelected
+        ? current.filter((id) => !selectableOrderIds.includes(id))
+        : Array.from(new Set([...current, ...selectableOrderIds])),
+    );
   };
 
   const openDetail = async (id: number) => {
@@ -416,7 +470,7 @@ export function AdminOrdersClient() {
                   ? "border-zinc-950 bg-zinc-950 text-white"
                   : "border-zinc-200 text-zinc-500 hover:bg-zinc-100"
               }`}
-              onClick={() => setStatusFilter(value as StatusFilter)}
+              onClick={() => changeStatusFilter(value as StatusFilter)}
             >
               {label}
             </button>
@@ -428,7 +482,7 @@ export function AdminOrdersClient() {
             className="h-10 w-72 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-950"
             placeholder="이메일 또는 주문번호 검색"
             value={keyword}
-            onChange={(event) => setKeyword(event.target.value)}
+            onChange={(event) => changeKeyword(event.target.value)}
           />
           <button
             type="button"
@@ -480,7 +534,7 @@ export function AdminOrdersClient() {
             </tr>
           </thead>
           <tbody>
-            {filteredOrders.map((order) => (
+            {paginatedOrders.map((order) => (
               <tr key={order.id} className="border-t border-zinc-100">
                 <td className="px-4 py-3">
                   <input
@@ -539,6 +593,48 @@ export function AdminOrdersClient() {
         {!isLoading && filteredOrders.length === 0 && (
           <div className="border-t border-zinc-100 px-4 py-10 text-center text-sm text-zinc-500">
             조건에 맞는 주문이 없습니다.
+          </div>
+        )}
+
+        {!isLoading && filteredOrders.length > 0 && (
+          <div className="flex items-center justify-between border-t border-zinc-200 px-4 py-3 text-sm text-zinc-500">
+            <span>
+              조회 {filteredOrders.length}건 중 {visibleStart}-{visibleEnd}건 표시
+            </span>
+            <div className="flex gap-1">
+              <button
+                type="button"
+                className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              >
+                이전
+              </button>
+              {pageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className={`rounded px-3 py-1.5 ${
+                    currentPage === page
+                      ? "bg-zinc-950 text-white"
+                      : "border border-zinc-300"
+                  }`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+              >
+                다음
+              </button>
+            </div>
           </div>
         )}
       </div>
