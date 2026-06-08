@@ -15,6 +15,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -55,7 +58,10 @@ public class AdminProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
                 .andExpect(jsonPath("$.message").value("상품 목록 조회 성공"))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data").isArray())
+                .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(1)))
+                .andExpect(jsonPath("$.data[*].id", hasItem(savedProductId.intValue())))
+                .andExpect(jsonPath("$.data[*].name", hasItem("테스트 상품")));
     }
 
     @Test
@@ -64,9 +70,12 @@ public class AdminProductControllerTest {
         mvc.perform(get("/api/admin/products/" + savedProductId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
+                .andExpect(jsonPath("$.message").value("상품 조회 성공"))
                 .andExpect(jsonPath("$.data.id").value(savedProductId))
                 .andExpect(jsonPath("$.data.name").value("테스트 상품"))
                 .andExpect(jsonPath("$.data.price").value(10000))
+                .andExpect(jsonPath("$.data.description").value("테스트 설명"))
+                .andExpect(jsonPath("$.data.imageUrl").value("http://test.com/image.jpg"))
                 .andExpect(jsonPath("$.data.createDate").exists())
                 .andExpect(jsonPath("$.data.modifyDate").exists());
     }
@@ -104,6 +113,30 @@ public class AdminProductControllerTest {
                 .andExpect(jsonPath("$.message").value("상품 등록 성공"))
                 .andExpect(jsonPath("$.data.name").value("새 상품"))
                 .andExpect(jsonPath("$.data.price").value(15000));
+    }
+
+    @Test
+    @DisplayName("A-04-1: 상품 등록 성공 - 가격 0 허용")
+    void createProduct_zeroPrice() throws Exception {
+        String requestBody = """
+                {
+                    "name": "무료 샘플",
+                    "price": 0,
+                    "description": "무료 샘플 설명",
+                    "imageUrl": "http://new.com/sample.jpg"
+                }
+                """;
+
+        mvc.perform(post("/api/admin/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultCode").value("201"))
+                .andExpect(jsonPath("$.message").value("상품 등록 성공"))
+                .andExpect(jsonPath("$.data.name").value("무료 샘플"))
+                .andExpect(jsonPath("$.data.price").value(0))
+                .andExpect(jsonPath("$.data.description").value("무료 샘플 설명"))
+                .andExpect(jsonPath("$.data.imageUrl").value("http://new.com/sample.jpg"));
     }
 
     @Test
@@ -201,6 +234,26 @@ public class AdminProductControllerTest {
     }
 
     @Test
+    @DisplayName("A-09-1: name 공백으로 등록 시 400")
+    void createProduct_whitespaceName() throws Exception {
+        String requestBody = """
+                {
+                    "name": "   ",
+                    "price": 10000,
+                    "description": "테스트 설명",
+                    "imageUrl": "http://test.com/image.jpg"
+                }
+                """;
+
+        mvc.perform(post("/api/admin/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("상품명은 필수입니다."));
+    }
+
+    @Test
     @DisplayName("A-08: 상품 이미지 업로드 성공 - 201 반환")
     void uploadProductImage() throws Exception {
         MockMultipartFile image = new MockMultipartFile(
@@ -215,7 +268,42 @@ public class AdminProductControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.resultCode").value("201"))
                 .andExpect(jsonPath("$.message").value("상품 이미지 업로드 성공"))
-                .andExpect(jsonPath("$.data.imageUrl").value(org.hamcrest.Matchers.startsWith("/uploads/product-images/")));
+                .andExpect(jsonPath("$.data.imageUrl").value(startsWith("/uploads/product-images/")))
+                .andExpect(jsonPath("$.data.imageUrl").value(org.hamcrest.Matchers.endsWith(".png")));
+    }
+
+    @Test
+    @DisplayName("A-08-1: 상품 이미지 업로드 실패 - 빈 파일")
+    void uploadProductImage_emptyFile() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image",
+                "empty.png",
+                MediaType.IMAGE_PNG_VALUE,
+                new byte[0]
+        );
+
+        mvc.perform(multipart("/api/admin/products/images")
+                        .file(image))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("업로드할 이미지 파일을 선택해주세요."));
+    }
+
+    @Test
+    @DisplayName("A-08-2: 상품 이미지 업로드 실패 - 이미지가 아닌 파일")
+    void uploadProductImage_notImage() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image",
+                "coffee.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "not-image".getBytes()
+        );
+
+        mvc.perform(multipart("/api/admin/products/images")
+                        .file(image))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("jpg, png, webp, gif 이미지만 업로드할 수 있습니다."));
     }
 
     // ──────────────────────────────────────────
@@ -241,7 +329,9 @@ public class AdminProductControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("200"))
                 .andExpect(jsonPath("$.message").value("상품 수정 성공"))
                 .andExpect(jsonPath("$.data.name").value("수정된 상품"))
-                .andExpect(jsonPath("$.data.price").value(20000));
+                .andExpect(jsonPath("$.data.price").value(20000))
+                .andExpect(jsonPath("$.data.description").value("수정된 설명"))
+                .andExpect(jsonPath("$.data.imageUrl").value("http://modified.com/image.jpg"));
     }
 
     @Test
@@ -278,6 +368,44 @@ public class AdminProductControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("400"));
     }
 
+    @Test
+    @DisplayName("A-10-1: 수정 시 price 음수이면 400")
+    void updateProduct_negativePrice() throws Exception {
+        String requestBody = """
+                {
+                    "name": "수정된 상품",
+                    "price": -1,
+                    "description": "수정된 설명",
+                    "imageUrl": "http://modified.com/image.jpg"
+                }
+                """;
+
+        mvc.perform(put("/api/admin/products/" + savedProductId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("가격은 0 이상이어야 합니다."));
+    }
+
+    @Test
+    @DisplayName("A-10-2: 상품 id 타입이 숫자가 아니면 500")
+    void updateProduct_notNumberId() throws Exception {
+        String requestBody = """
+                {
+                    "name": "수정된 상품",
+                    "price": 20000
+                }
+                """;
+
+        mvc.perform(put("/api/admin/products/not-number")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.resultCode").value("500"))
+                .andExpect(jsonPath("$.message").value("서버 오류가 발생했습니다."));
+    }
+
     // ──────────────────────────────────────────
     // A-11 ~ A-12 : 삭제
     // ──────────────────────────────────────────
@@ -290,6 +418,11 @@ public class AdminProductControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("200"))
                 .andExpect(jsonPath("$.message").value("상품 삭제 성공"))
                 .andExpect(jsonPath("$.data").doesNotExist());
+
+        mvc.perform(get("/api/admin/products/" + savedProductId))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404"))
+                .andExpect(jsonPath("$.message").value("상품을 찾을 수 없습니다. id=" + savedProductId));
     }
 
     @Test
