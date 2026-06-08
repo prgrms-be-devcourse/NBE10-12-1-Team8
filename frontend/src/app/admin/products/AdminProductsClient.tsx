@@ -27,6 +27,8 @@ const emptyForm: ProductFormState = {
   imageUrl: "",
 };
 
+const PRODUCTS_PER_PAGE = 10;
+
 function formatPrice(value: number) {
   return value.toLocaleString("ko-KR");
 }
@@ -278,6 +280,7 @@ function DeleteConfirmModal({
 export function AdminProductsClient() {
   const [products, setProducts] = useState<AdminProductDetailResponse[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
   const [form, setForm] = useState<ProductFormState>(emptyForm);
   const [editingProduct, setEditingProduct] =
     useState<AdminProductDetailResponse | null>(null);
@@ -299,6 +302,7 @@ export function AdminProductsClient() {
       );
 
       setProducts(productDetails);
+      setCurrentPage(1);
     } catch {
       setErrorMessage(
         "상품 목록을 불러오지 못했습니다. 백엔드 서버가 실행 중인지 확인해주세요.",
@@ -357,6 +361,45 @@ export function AdminProductsClient() {
         .includes(normalizedKeyword),
     );
   }, [keyword, products]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE),
+  );
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalPages));
+  }, [totalPages]);
+
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+
+    return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
+  }, [currentPage, filteredProducts]);
+
+  const pageNumbers = useMemo(() => {
+    const endPage = Math.min(totalPages, Math.max(5, currentPage + 2));
+    const startPage = Math.max(1, Math.min(currentPage - 2, endPage - 4));
+
+    return Array.from(
+      { length: endPage - startPage + 1 },
+      (_, index) => startPage + index,
+    );
+  }, [currentPage, totalPages]);
+
+  const visibleStart =
+    filteredProducts.length === 0
+      ? 0
+      : (currentPage - 1) * PRODUCTS_PER_PAGE + 1;
+  const visibleEnd = Math.min(
+    currentPage * PRODUCTS_PER_PAGE,
+    filteredProducts.length,
+  );
+
+  const changeKeyword = (nextKeyword: string) => {
+    setKeyword(nextKeyword);
+    setCurrentPage(1);
+  };
 
   const openCreateModal = () => {
     setEditingProduct(null);
@@ -456,7 +499,7 @@ export function AdminProductsClient() {
           className="h-10 w-80 rounded border border-zinc-300 px-3 text-sm outline-none focus:border-zinc-950"
           placeholder="상품명 검색..."
           value={keyword}
-          onChange={(event) => setKeyword(event.target.value)}
+          onChange={(event) => changeKeyword(event.target.value)}
         />
         <button
           type="button"
@@ -483,7 +526,7 @@ export function AdminProductsClient() {
             </tr>
           </thead>
           <tbody>
-            {filteredProducts.map((product) => (
+            {paginatedProducts.map((product) => (
               <tr key={product.id} className="border-t border-zinc-100">
                 <td className="px-4 py-3 text-zinc-500">#{product.id}</td>
                 <td className="px-4 py-3">
@@ -557,16 +600,39 @@ export function AdminProductsClient() {
         {!isLoading && filteredProducts.length > 0 && (
           <div className="flex items-center justify-between border-t border-zinc-200 px-4 py-3 text-sm text-zinc-500">
             <span>
-              전체 {products.length}개 상품 중 {filteredProducts.length}개 표시
+              조회 {filteredProducts.length}개 중 {visibleStart}-{visibleEnd}개 표시
             </span>
             <div className="flex gap-1">
-              <button className="rounded border border-zinc-300 px-3 py-1.5">
+              <button
+                type="button"
+                className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              >
                 이전
               </button>
-              <button className="rounded bg-zinc-950 px-3 py-1.5 text-white">
-                1
-              </button>
-              <button className="rounded border border-zinc-300 px-3 py-1.5">
+              {pageNumbers.map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className={`rounded px-3 py-1.5 ${
+                    currentPage === page
+                      ? "bg-zinc-950 text-white"
+                      : "border border-zinc-300"
+                  }`}
+                  onClick={() => setCurrentPage(page)}
+                >
+                  {page}
+                </button>
+              ))}
+              <button
+                type="button"
+                className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
+                disabled={currentPage === totalPages}
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+              >
                 다음
               </button>
             </div>
