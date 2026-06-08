@@ -6,7 +6,6 @@ import com.backend.domain.order.order.entity.OrderStatus;
 import com.backend.domain.order.order.repository.OrderRepository;
 import com.backend.domain.product.product.entity.Product;
 import com.backend.domain.product.product.repository.ProductRepository;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,10 +42,12 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    @Transactional(readOnly = true)
     public long count() {
         return orderRepository.count();
     }
 
+    @Transactional(readOnly = true)
    public List<Order> findByEmail(String email){
        return orderRepository.findByEmail(email);
    }
