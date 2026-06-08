@@ -131,5 +131,19 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$.message").value("주문을 찾을 수 없습니다."));
     }
 
+    @Test
+    @DisplayName("주문 취소 실패 - 이미 발송된 경우")
+    public void t4() throws Exception{
+        ResultActions resultActions = mvc
+                .perform(
+                        delete("/api/orders/{orderId}", shippedOrderId)
+                ).andDo(print());
+        resultActions
+                .andExpect(handler().handlerType(OrderController.class))
+                .andExpect(handler().methodName("deleteOrder"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("주문완료 상태의 주문만 취소할 수 있습니다."));
+    }
 
 }
