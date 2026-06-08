@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -40,6 +42,7 @@ public class OrderControllerTest {
 
     private Long orderdOrderId;
     private Long shippedOrderId;
+    private Long productId;
 
     @BeforeEach
    public void setUp(){
@@ -50,6 +53,7 @@ public class OrderControllerTest {
                 "꽃향과 산미가 특징인 싱글오리진 원두",
                 "https://example.com/ethiopia.jpg"
         ));
+        productId = ethiopia.getId();
         Product colombia = productRepository.save(new Product(
                 "콜롬비아 수프리모",
                 15000,
@@ -147,5 +151,83 @@ public class OrderControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("400"))
                 .andExpect(jsonPath("$.message").value("주문완료 상태의 주문만 취소할 수 있습니다."));
     }
+
+    @Test
+    @DisplayName("동일 조건 재주문 시 주문 합산")
+    public void t5() throws Exception {
+        String requestBody = """
+                {
+                   "email" : "merge@test.com",
+                   "address" : "서울 종로구 종로 1",
+                   "zipcode": "03154",
+                   "items": [{"productId": %d, "quantity": 1}]
+                }
+                """.formatted(productId);
+
+        ResultActions resultActions = mvc
+                .perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andDo(print());
+
+        resultActions
+                .andExpect(handler().handlerType(OrderController.class))
+                .andExpect(handler().methodName("createOrder"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("201"))
+                .andExpect(jsonPath("$.message").value("주문이 생성되었습니다."));
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/orders").param("email", "merge@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    @DisplayName("같은 이메일 다른 주소 주문")
+    public void t6() throws Exception {
+        String requestBody1 = """
+                {
+                   "email" : "merge@test.com",
+                   "address" : "서울 종로구 종로 1",
+                   "zipcode": "03154",
+                   "items": [{"productId": %d, "quantity": 1}]
+                }
+                """.formatted(productId);
+        String requestBody2 = """
+                {
+                   "email" : "merge@test.com",
+                   "address" : "서울 종로구 종로 2",
+                   "zipcode": "03155",
+                   "items": [{"productId": %d, "quantity": 1}]
+                }
+                """.formatted(productId);
+
+        ResultActions resultActions = mvc
+                .perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody1))
+                .andDo(print());
+        resultActions
+                .andExpect(handler().handlerType(OrderController.class))
+                .andExpect(handler().methodName("createOrder"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("201"))
+                .andExpect(jsonPath("$.message").value("주문이 생성되었습니다."));
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody2))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/orders").param("email", "merge@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
 
 }

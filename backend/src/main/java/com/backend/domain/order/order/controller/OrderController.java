@@ -8,6 +8,7 @@ import com.backend.domain.order.order.service.OrderService;
 import com.backend.domain.order.order.dto.OrderModifyRequest;
 import com.backend.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +24,7 @@ public class OrderController {
 
     @PostMapping
     public ResponseEntity<RsData<OrderCreateResponse>> createOrder(
-            @RequestBody OrderCreateRequest request
+            @Valid @RequestBody OrderCreateRequest request
     ) {
 
         Order order = orderService.create(
