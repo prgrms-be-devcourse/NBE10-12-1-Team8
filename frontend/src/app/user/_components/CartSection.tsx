@@ -4,6 +4,7 @@ export function CartSection({
   items,
   total,
   email,
+  address,
   postcode,
   isOrdering,
   orderResult,
@@ -11,6 +12,7 @@ export function CartSection({
   onChangeCartQuantity,
   onRemoveFromCart,
   onEmailChange,
+  onAddressChange,
   onPostcodeChange,
   onOrder,
   onDismissResult,
@@ -18,6 +20,7 @@ export function CartSection({
   items: CartItem[];
   total: number;
   email: string;
+  address: string;
   postcode: string;
   isOrdering: boolean;
   orderResult: 'success' | 'error' | null;
@@ -25,6 +28,7 @@ export function CartSection({
   onChangeCartQuantity: (productId: number, delta: number) => void;
   onRemoveFromCart: (productId: number) => void;
   onEmailChange: (v: string) => void;
+  onAddressChange: (v: string) => void;
   onPostcodeChange: (v: string) => void;
   onOrder: () => void;
   onDismissResult: () => void;
@@ -102,6 +106,18 @@ export function CartSection({
               value={email}
               onChange={(e) => onEmailChange(e.target.value)}
               placeholder="example@email.com"
+              className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+              주소 <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => onAddressChange(e.target.value)}
+              placeholder="배송 받을 주소를 입력하세요"
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all"
             />
           </div>

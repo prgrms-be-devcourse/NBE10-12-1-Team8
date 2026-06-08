@@ -3,7 +3,7 @@ export interface Product {
   name: string;
   description: string;
   price: number;
-  category: string;
+  category?: string;
   imageUrl?: string;
 }
 
@@ -14,12 +14,18 @@ export interface CartItem {
 
 export type OrderStatus = 'ORDERED' | 'SHIPPED';
 
-export interface OrderItem {
-  productId: number;
-  productName: string;
+export interface ApiProduct {
+  id: number;
+  name: string;
+  price: number;
+  description: string;
+  imageUrl?: string;
+}
+
+export interface ApiOrderItem {
+  id: number;
+  product: ApiProduct;
   quantity: number;
-  orderPrice: number;
-  totalPrice: number;
 }
 
 export interface Order {
@@ -28,8 +34,7 @@ export interface Order {
   shippingDate: string;
   address: string;
   zipcode: string;
-  totalPrice: number;
   status: OrderStatus;
   orderAt: string;
-  items: OrderItem[];
+  orderItems?: ApiOrderItem[];
 }

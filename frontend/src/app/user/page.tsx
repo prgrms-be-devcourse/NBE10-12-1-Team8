@@ -12,16 +12,18 @@ export default function ShopPage() {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
   const [postcode, setPostcode] = useState('');
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderResult, setOrderResult] = useState<'success' | 'error' | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
-    fetch('/api/v1/products')
+    fetch('/api/products')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setProducts(data);
+        const list = data?.data;
+        if (Array.isArray(list) && list.length > 0) setProducts(list);
       })
       .catch(() => {});
   }, []);
@@ -57,27 +59,28 @@ export default function ShopPage() {
   };
 
   const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const canOrder = cart.length > 0 && email.trim() !== '' && postcode.trim() !== '';
+  const canOrder = cart.length > 0 && email.trim() !== '' && address.trim() !== '' && postcode.trim() !== '';
 
   const handleOrder = async () => {
     if (!canOrder) return;
     setIsOrdering(true);
     setOrderResult(null);
     try {
-      const res = await fetch('/api/v1/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          address: postcode,
-          postcode,
-          orderItems: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+          address,
+          zipcode: postcode,
+          items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
         }),
       });
       if (res.ok) {
         setOrderResult('success');
         setCart([]);
         setEmail('');
+        setAddress('');
         setPostcode('');
       } else {
         setOrderResult('error');
@@ -134,6 +137,7 @@ export default function ShopPage() {
               items={cart}
               total={total}
               email={email}
+              address={address}
               postcode={postcode}
               isOrdering={isOrdering}
               orderResult={orderResult}
@@ -141,6 +145,7 @@ export default function ShopPage() {
               onChangeCartQuantity={changeCartQty}
               onRemoveFromCart={removeFromCart}
               onEmailChange={setEmail}
+              onAddressChange={setAddress}
               onPostcodeChange={setPostcode}
               onOrder={handleOrder}
               onDismissResult={() => setOrderResult(null)}

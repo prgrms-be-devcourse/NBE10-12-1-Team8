@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import type { Order } from '../_types';
-import { fetchOrdersByEmail, cancelOrder, updateOrderAddress, formatDateTime, formatPrice } from '../_mocks';
+import { getOrdersByEmail, cancelOrder, updateOrderAddress } from '../_api';
+import { formatDateTime, formatPrice } from '../_mocks';
 import { StatusBadge } from './StatusBadge';
 import { EditAddressModal } from './EditAddressModal';
 import { CancelConfirmModal } from './CancelConfirmModal';
@@ -32,7 +33,8 @@ export function MyOrderDrawer({ onClose }: { onClose: () => void }) {
     setOrders([]);
     setSearchedEmail(trimmed);
     try {
-      setOrders(await fetchOrdersByEmail(trimmed));
+      const result = await getOrdersByEmail(trimmed);
+      setOrders(Array.isArray(result) ? result : []);
       setDrawerState('results');
     } catch {
       setDrawerState('error');
@@ -154,17 +156,26 @@ export function MyOrderDrawer({ onClose }: { onClose: () => void }) {
                     </div>
 
                     <div className="px-4 py-3 space-y-1.5">
-                      {order.items.map((item) => (
-                        <div key={item.productId} className="flex items-center justify-between text-sm">
+                      {(order.orderItems ?? []).map((item) => (
+                        <div key={item.id} className="flex items-center justify-between text-sm">
                           <span className="text-gray-700">
-                            {item.productName} <span className="text-gray-400">× {item.quantity}</span>
+                            {item.product.name} <span className="text-gray-400">× {item.quantity}</span>
                           </span>
-                          <span className="font-semibold text-gray-900">{formatPrice(item.totalPrice)}원</span>
+                          <span className="font-semibold text-gray-900">
+                            {formatPrice(item.product.price * item.quantity)}원
+                          </span>
                         </div>
                       ))}
                       <div className="flex items-center justify-between border-t border-gray-100 pt-2 mt-2">
                         <span className="text-sm font-semibold text-gray-900">합계</span>
-                        <span className="text-sm font-bold text-gray-900">{formatPrice(order.totalPrice)}원</span>
+                        <span className="text-sm font-bold text-gray-900">
+                          {formatPrice(
+                            (order.orderItems ?? []).reduce(
+                              (sum, item) => sum + item.product.price * item.quantity,
+                              0,
+                            ),
+                          )}원
+                        </span>
                       </div>
                     </div>
 

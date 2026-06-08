@@ -86,8 +86,8 @@ export function formatDateTime(value: string) {
   return value.replace('T', ' ').slice(0, 16);
 }
 
-export function formatPrice(value: number) {
-  return value.toLocaleString('ko-KR');
+export function formatPrice(value: number | undefined | null) {
+  return (value ?? 0).toLocaleString('ko-KR');
 }
 
 // GET /api/v1/orders?email={email}
