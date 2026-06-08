@@ -80,4 +80,8 @@ public class Order extends BaseEntity {
     public void updateStatus(OrderStatus status){
         this.status = status;
     }
+    public void modify(String address, String zipcode) {
+        this.address = address;
+        this.zipcode = zipcode;
+    }
 }

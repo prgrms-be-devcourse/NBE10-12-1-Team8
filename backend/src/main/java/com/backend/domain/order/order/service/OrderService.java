@@ -56,4 +56,17 @@ public class OrderService {
        }
        orderRepository.delete(order);
    }
+    public Order modify(Long id, String address, String zipcode) {
+
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("주문을 찾을 수 없습니다."));
+
+        if (order.getStatus() != OrderStatus.ORDERED) {
+            throw new IllegalStateException("주문완료 상태의 주문만 수정할 수 있습니다.");
+        }
+
+        order.modify(address, zipcode);
+
+        return orderRepository.save(order);
+    }
 }
