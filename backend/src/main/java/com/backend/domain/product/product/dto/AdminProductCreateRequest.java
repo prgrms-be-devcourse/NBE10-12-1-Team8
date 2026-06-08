@@ -20,8 +20,10 @@ public class AdminProductCreateRequest {
     private int price;
 
     @Schema(description = "상품 설명", example = "꽃향과 산미가 특징인 싱글오리진 원두")
+    @NotBlank(message = "상품 설명은 필수입니다.")
     private String description;
 
     @Schema(description = "상품 이미지 URL", example = "https://example.com/ethiopia.jpg")
+    @NotBlank(message = "상품 이미지는 필수입니다.")
     private String imageUrl;
 }

@@ -2,10 +2,12 @@ package com.backend.domain.product.product.controller;
 
 import com.backend.domain.product.product.dto.AdminProductCreateRequest;
 import com.backend.domain.product.product.dto.AdminProductDetailResponse;
+import com.backend.domain.product.product.dto.AdminProductImageUploadResponse;
 import com.backend.domain.product.product.dto.AdminProductResponse;
 import com.backend.domain.product.product.dto.AdminProductUpdateRequest;
 import com.backend.domain.product.product.entity.Product;
 import com.backend.domain.product.product.service.AdminProductService;
+import com.backend.domain.product.product.service.ProductImageStorageService;
 import com.backend.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +19,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -27,6 +30,7 @@ import java.util.List;
 public class AdminProductController {
 
     private final AdminProductService adminProductService;
+    private final ProductImageStorageService productImageStorageService;
 
     @Operation(summary = "상품 목록 조회", description = "전체 상품 목록을 조회합니다.")
     @ApiResponse(responseCode = "200", description = "조회 성공")
@@ -67,6 +71,20 @@ public class AdminProductController {
         );
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(RsData.of("201", "상품 등록 성공", AdminProductResponse.from(product)));
+    }
+
+    @Operation(summary = "상품 이미지 업로드", description = "상품 이미지를 업로드하고 접근 가능한 이미지 URL을 반환합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "업로드 성공"),
+            @ApiResponse(responseCode = "400", description = "유효하지 않은 이미지 파일")
+    })
+    @PostMapping("/images")
+    public ResponseEntity<RsData<AdminProductImageUploadResponse>> uploadProductImage(
+            @RequestParam("image") MultipartFile image) {
+        String imageUrl = productImageStorageService.store(image);
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(RsData.of("201", "상품 이미지 업로드 성공", AdminProductImageUploadResponse.from(imageUrl)));
     }
 
     @Operation(summary = "상품 수정", description = "기존 상품 정보를 수정합니다.")

@@ -9,10 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -119,7 +121,7 @@ public class AdminProductControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.resultCode").value("400"))
-                .andExpect(jsonPath("$.message").value("상품명은 필수입니다."));
+                .andExpect(jsonPath("$.message").value(containsString("상품명은 필수입니다.")));
     }
 
     @Test
@@ -128,7 +130,9 @@ public class AdminProductControllerTest {
         String requestBody = """
                 {
                     "name": "테스트 상품",
-                    "price": -1
+                    "price": -1,
+                    "description": "테스트 설명",
+                    "imageUrl": "http://test.com/image.jpg"
                 }
                 """;
 
@@ -141,7 +145,47 @@ public class AdminProductControllerTest {
     }
 
     @Test
-    @DisplayName("A-07: name null로 등록 시 400")
+    @DisplayName("A-07: description 빈값으로 등록 시 400 - 상품 설명은 필수입니다.")
+    void createProduct_blankDescription() throws Exception {
+        String requestBody = """
+                {
+                    "name": "테스트 상품",
+                    "price": 10000,
+                    "description": "",
+                    "imageUrl": "http://test.com/image.jpg"
+                }
+                """;
+
+        mvc.perform(post("/api/admin/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("상품 설명은 필수입니다."));
+    }
+
+    @Test
+    @DisplayName("A-08: imageUrl 빈값으로 등록 시 400 - 상품 이미지는 필수입니다.")
+    void createProduct_blankImageUrl() throws Exception {
+        String requestBody = """
+                {
+                    "name": "테스트 상품",
+                    "price": 10000,
+                    "description": "테스트 설명",
+                    "imageUrl": ""
+                }
+                """;
+
+        mvc.perform(post("/api/admin/products")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("상품 이미지는 필수입니다."));
+    }
+
+    @Test
+    @DisplayName("A-09: name null로 등록 시 400")
     void createProduct_nullName() throws Exception {
         String requestBody = """
                 {
@@ -154,6 +198,24 @@ public class AdminProductControllerTest {
                         .content(requestBody))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.resultCode").value("400"));
+    }
+
+    @Test
+    @DisplayName("A-08: 상품 이미지 업로드 성공 - 201 반환")
+    void uploadProductImage() throws Exception {
+        MockMultipartFile image = new MockMultipartFile(
+                "image",
+                "coffee.png",
+                MediaType.IMAGE_PNG_VALUE,
+                "image-content".getBytes()
+        );
+
+        mvc.perform(multipart("/api/admin/products/images")
+                        .file(image))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.resultCode").value("201"))
+                .andExpect(jsonPath("$.message").value("상품 이미지 업로드 성공"))
+                .andExpect(jsonPath("$.data.imageUrl").value(org.hamcrest.Matchers.startsWith("/uploads/product-images/")));
     }
 
     // ──────────────────────────────────────────
