@@ -2,6 +2,7 @@ package com.backend.domain.order.order.controller;
 
 import com.backend.domain.order.order.dto.OrderCreateRequest;
 import com.backend.domain.order.order.dto.OrderCreateResponse;
+import com.backend.domain.order.order.dto.OrderResponse;
 import com.backend.domain.order.order.entity.Order;
 import com.backend.domain.order.order.service.OrderService;
 import com.backend.domain.order.order.dto.OrderModifyRequest;
@@ -42,10 +43,10 @@ public class OrderController {
     }
 
     @GetMapping
-    public ResponseEntity<RsData<List<Order>>> findByEmail(
+    public ResponseEntity<RsData<List<OrderResponse>>> findByEmail(
             @RequestParam String email
     ) {
-        List<Order> orders = orderService.findByEmail(email);
+        List<OrderResponse> orders = orderService.findByEmail(email).stream().map(OrderResponse::from).toList();
         return ResponseEntity.ok(
                 RsData.of(
                         "200",

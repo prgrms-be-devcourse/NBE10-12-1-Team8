@@ -4,6 +4,7 @@ import type {
   AdminOrderDetailResponse,
   AdminOrderResponse,
   AdminOrderStatusResponse,
+  AdminOrderStatusUpdateRequest,
 } from "@/types/adminOrder";
 
 type RsData<T> = {
@@ -46,6 +47,16 @@ export function getAdminOrder(id: number): Promise<AdminOrderDetailResponse> {
 export function shipAdminOrder(id: number): Promise<AdminOrderStatusResponse> {
   return request<AdminOrderStatusResponse>(`/api/admin/orders/${id}/shipped`, {
     method: "PUT",
+  });
+}
+
+export function updateAdminOrderStatus(
+  id: number,
+  body: AdminOrderStatusUpdateRequest,
+): Promise<AdminOrderStatusResponse> {
+  return request<AdminOrderStatusResponse>(`/api/admin/orders/${id}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
   });
 }
 

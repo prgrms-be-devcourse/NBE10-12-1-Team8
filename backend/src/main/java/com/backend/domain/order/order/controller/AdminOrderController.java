@@ -5,6 +5,7 @@ import com.backend.domain.order.order.dto.AdminOrderBulkShippedRequest;
 import com.backend.domain.order.order.dto.AdminOrderDetailResponse;
 import com.backend.domain.order.order.dto.AdminOrderResponse;
 import com.backend.domain.order.order.dto.AdminOrderStatusResponse;
+import com.backend.domain.order.order.dto.AdminOrderStatusUpdateRequest;
 import com.backend.domain.order.order.service.AdminOrderService;
 import com.backend.global.rsData.RsData;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +78,23 @@ public class AdminOrderController {
         AdminOrderStatusResponse order = AdminOrderStatusResponse.from(adminOrderService.updateShipped(id));
 
         return ResponseEntity.ok(RsData.of("200", "배송 완료 처리 성공", order));
+    }
+
+    @Operation(summary = "주문 상태 변경", description = "주문 1건의 상태를 지정한 상태로 변경합니다.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "상태 변경 성공"),
+            @ApiResponse(responseCode = "500", description = "주문 없음 또는 서버 오류")
+    })
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<RsData<AdminOrderStatusResponse>> updateOrderStatus(
+            @Parameter(description = "주문 ID", example = "1") @PathVariable Long id,
+            @RequestBody AdminOrderStatusUpdateRequest request
+    ) {
+        AdminOrderStatusResponse order = AdminOrderStatusResponse.from(
+                adminOrderService.updateStatus(id, request.status())
+        );
+
+        return ResponseEntity.ok(RsData.of("200", "주문 상태 변경 성공", order));
     }
 
     @Operation(summary = "일괄 배송 완료 처리", description = "여러 주문의 상태를 SHIPPED로 변경합니다.")

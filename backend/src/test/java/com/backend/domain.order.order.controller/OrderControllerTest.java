@@ -96,7 +96,10 @@ public class OrderControllerTest {
                 .andExpect(handler().methodName("findByEmail"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
-                .andExpect(jsonPath("$.data").isArray());
+                .andExpect(jsonPath("$.data[0].orderId").exists())
+                .andExpect(jsonPath("$.data[0].email").value("bean@test.com"))
+                .andExpect(jsonPath("$.data[0].status").exists())
+                .andExpect(jsonPath("$.data[0].items").isArray());
 
     }
     @Test
@@ -118,7 +121,6 @@ public class OrderControllerTest {
     @Test
     @DisplayName("주문 취소 실패 - 존재하지 않는 주문 ID")
     public void t3() throws Exception{
-        int id = orderdOrderId.intValue();
         ResultActions resultActions = mvc
                 .perform(
                         delete("/api/orders/{orderId}", 999)

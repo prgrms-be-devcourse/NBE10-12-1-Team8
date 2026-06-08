@@ -4,8 +4,7 @@ import {
   getAdminOrder,
   getAdminOrders,
   getTodayAdminOrders,
-  shipAdminOrder,
-  shipAdminOrders,
+  updateAdminOrderStatus,
 } from "@/api/adminOrder";
 import type {
   AdminOrderDetailResponse,
@@ -19,6 +18,62 @@ type StatusFilter = "ALL" | OrderStatus;
 
 const ORDERS_PER_PAGE = 10;
 
+const ORDER_STATUS_FLOW: OrderStatus[] = [
+  "ORDERED",
+  "CONFIRMED",
+  "PREPARING_SHIPMENT",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELED",
+];
+
+const ORDER_STATUS_META: Record<
+  OrderStatus,
+  {
+    label: string;
+    badgeClassName: string;
+    nextStatus: OrderStatus | null;
+    actionLabel: string;
+  }
+> = {
+  ORDERED: {
+    label: "주문완료",
+    badgeClassName: "bg-amber-50 text-amber-700",
+    nextStatus: "CONFIRMED",
+    actionLabel: "주문 확인",
+  },
+  CONFIRMED: {
+    label: "주문확인",
+    badgeClassName: "bg-sky-50 text-sky-700",
+    nextStatus: "PREPARING_SHIPMENT",
+    actionLabel: "배송 준비",
+  },
+  PREPARING_SHIPMENT: {
+    label: "배송준비중",
+    badgeClassName: "bg-indigo-50 text-indigo-700",
+    nextStatus: "SHIPPED",
+    actionLabel: "배송 시작",
+  },
+  SHIPPED: {
+    label: "배송중",
+    badgeClassName: "bg-blue-50 text-blue-700",
+    nextStatus: "DELIVERED",
+    actionLabel: "배송 완료",
+  },
+  DELIVERED: {
+    label: "배송완료",
+    badgeClassName: "bg-emerald-50 text-emerald-700",
+    nextStatus: null,
+    actionLabel: "처리 완료",
+  },
+  CANCELED: {
+    label: "주문취소",
+    badgeClassName: "bg-rose-50 text-rose-700",
+    nextStatus: null,
+    actionLabel: "취소 완료",
+  },
+};
+
 function formatDateTime(value: string) {
   return value.replace("T", " ").slice(0, 16);
 }
@@ -28,23 +83,21 @@ function formatPrice(value: number) {
 }
 
 function getStatusLabel(status: OrderStatus) {
-  return status === "SHIPPED" ? "배송완료" : "주문완료";
+  return ORDER_STATUS_META[status].label;
 }
 
-function getShippingButtonLabel(status: OrderStatus) {
-  return status === "SHIPPED" ? "처리 완료" : "배송 처리";
+function getStatusActionLabel(status: OrderStatus) {
+  return ORDER_STATUS_META[status].actionLabel;
+}
+
+function getNextStatus(status: OrderStatus) {
+  return ORDER_STATUS_META[status].nextStatus;
 }
 
 function StatusBadge({ status }: Pick<AdminOrderResponse, "status">) {
-  const isShipped = status === "SHIPPED";
-
   return (
     <span
-      className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${
-        isShipped
-          ? "bg-emerald-50 text-emerald-700"
-          : "bg-amber-50 text-amber-700"
-      }`}
+      className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${ORDER_STATUS_META[status].badgeClassName}`}
     >
       {getStatusLabel(status)}
     </span>
@@ -54,14 +107,16 @@ function StatusBadge({ status }: Pick<AdminOrderResponse, "status">) {
 function DetailModal({
   order,
   onClose,
-  onShip,
+  onAdvanceStatus,
   isProcessing,
 }: {
   order: AdminOrderDetailResponse;
   onClose: () => void;
-  onShip: (id: number) => void;
+  onAdvanceStatus: (order: AdminOrderDetailResponse) => void;
   isProcessing: boolean;
 }) {
+  const nextStatus = getNextStatus(order.status);
+
   return (
     <div
       className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-zinc-950/45 p-6"
@@ -159,10 +214,10 @@ function DetailModal({
           <button
             type="button"
             className="rounded bg-zinc-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-zinc-300"
-            disabled={order.status === "SHIPPED" || isProcessing}
-            onClick={() => onShip(order.id)}
+            disabled={!nextStatus || isProcessing}
+            onClick={() => onAdvanceStatus(order)}
           >
-            {getShippingButtonLabel(order.status)}
+            {getStatusActionLabel(order.status)}
           </button>
         </footer>
       </section>
@@ -234,13 +289,17 @@ export function AdminOrdersClient() {
   }, []);
 
   const orderCounts = useMemo(() => {
-    const orderedCount = orders.filter((order) => order.status === "ORDERED").length;
-    const shippedCount = orders.filter((order) => order.status === "SHIPPED").length;
+    const statusCounts = ORDER_STATUS_FLOW.reduce(
+      (counts, status) => ({
+        ...counts,
+        [status]: orders.filter((order) => order.status === status).length,
+      }),
+      {} as Record<OrderStatus, number>,
+    );
     const totalPrice = orders.reduce((sum, order) => sum + order.totalPrice, 0);
 
     return {
-      orderedCount,
-      shippedCount,
+      statusCounts,
       totalPrice,
     };
   }, [orders]);
@@ -293,7 +352,7 @@ export function AdminOrdersClient() {
   );
 
   const selectableOrderIds = paginatedOrders
-    .filter((order) => order.status === "ORDERED")
+    .filter((order) => getNextStatus(order.status))
     .map((order) => order.id);
   const isAllSelected =
     selectableOrderIds.length > 0 &&
@@ -349,34 +408,17 @@ export function AdminOrdersClient() {
     }
   };
 
-  const completeSingleShipping = async (id: number) => {
-    const confirmed = window.confirm("선택한 주문을 배송완료 처리할까요?");
+  const advanceSingleStatus = async (
+    order: AdminOrderResponse | AdminOrderDetailResponse,
+  ) => {
+    const nextStatus = getNextStatus(order.status);
 
-    if (!confirmed) {
-      return;
-    }
-
-    setIsProcessing(true);
-    setErrorMessage("");
-
-    try {
-      await shipAdminOrder(id);
-      setSelectedOrderDetail(null);
-      await loadOrders(orderView);
-    } catch {
-      setErrorMessage("배송완료 처리에 실패했습니다.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const completeBulkShipping = async () => {
-    if (selectedOrderIds.length === 0) {
+    if (!nextStatus) {
       return;
     }
 
     const confirmed = window.confirm(
-      `선택한 ${selectedOrderIds.length}건을 배송완료 처리할까요?`,
+      `선택한 주문을 ${getStatusLabel(nextStatus)} 상태로 변경할까요?`,
     );
 
     if (!confirmed) {
@@ -387,10 +429,58 @@ export function AdminOrdersClient() {
     setErrorMessage("");
 
     try {
-      await shipAdminOrders({ orderIds: selectedOrderIds });
+      await updateAdminOrderStatus(order.id, { status: nextStatus });
+      setSelectedOrderDetail(null);
       await loadOrders(orderView);
     } catch {
-      setErrorMessage("일괄 배송완료 처리에 실패했습니다.");
+      setErrorMessage("주문 상태 변경에 실패했습니다.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const advanceBulkStatus = async () => {
+    if (selectedOrderIds.length === 0) {
+      return;
+    }
+
+    const selectedOrders = orders.filter((order) =>
+      selectedOrderIds.includes(order.id),
+    );
+    const statusUpdates = selectedOrders
+      .map((order) => ({
+        id: order.id,
+        status: getNextStatus(order.status),
+      }))
+      .filter(
+        (update): update is { id: number; status: OrderStatus } =>
+          update.status !== null,
+      );
+
+    if (statusUpdates.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `선택한 ${statusUpdates.length}건의 주문 상태를 다음 단계로 변경할까요?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setIsProcessing(true);
+    setErrorMessage("");
+
+    try {
+      await Promise.all(
+        statusUpdates.map((update) =>
+          updateAdminOrderStatus(update.id, { status: update.status }),
+        ),
+      );
+      await loadOrders(orderView);
+    } catch {
+      setErrorMessage("일괄 주문 상태 변경에 실패했습니다.");
     } finally {
       setIsProcessing(false);
     }
@@ -402,7 +492,7 @@ export function AdminOrdersClient() {
         <div>
           <h2 className="text-2xl font-bold">주문 관리</h2>
           <p className="mt-1 text-sm text-zinc-500">
-            주문 목록과 배송 처리 상태를 확인합니다.
+            주문 목록과 처리 상태를 확인합니다.
           </p>
         </div>
 
@@ -444,8 +534,10 @@ export function AdminOrdersClient() {
           <p className="mt-3 text-2xl font-bold">{orders.length}</p>
         </div>
         <div className="rounded border border-zinc-200 bg-white px-5 py-4">
-          <p className="text-sm font-medium text-zinc-500">배송 대기</p>
-          <p className="mt-3 text-2xl font-bold">{orderCounts.orderedCount}</p>
+          <p className="text-sm font-medium text-zinc-500">처리 대기</p>
+          <p className="mt-3 text-2xl font-bold">
+            {orders.filter((order) => getNextStatus(order.status)).length}
+          </p>
         </div>
         <div className="rounded border border-zinc-200 bg-white px-5 py-4">
           <p className="text-sm font-medium text-zinc-500">총 주문 금액</p>
@@ -455,12 +547,14 @@ export function AdminOrdersClient() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded border border-zinc-200 bg-white px-4 py-3">
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded border border-zinc-200 bg-white px-4 py-3">
+        <div className="flex flex-wrap gap-2">
           {[
             ["ALL", `전체 ${orders.length}`],
-            ["ORDERED", `주문완료 ${orderCounts.orderedCount}`],
-            ["SHIPPED", `배송완료 ${orderCounts.shippedCount}`],
+            ...ORDER_STATUS_FLOW.map((status) => [
+              status,
+              `${getStatusLabel(status)} ${orderCounts.statusCounts[status]}`,
+            ]),
           ].map(([value, label]) => (
             <button
               key={value}
@@ -503,9 +597,9 @@ export function AdminOrdersClient() {
           type="button"
           className="rounded bg-zinc-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-zinc-300"
           disabled={selectedOrderIds.length === 0 || isProcessing}
-          onClick={() => void completeBulkShipping()}
+          onClick={() => void advanceBulkStatus()}
         >
-          선택 배송 처리
+          선택 상태 변경
         </button>
       </div>
 
@@ -541,7 +635,7 @@ export function AdminOrdersClient() {
                     type="checkbox"
                     aria-label={`주문 ${order.id} 선택`}
                     checked={selectedOrderIds.includes(order.id)}
-                    disabled={order.status === "SHIPPED"}
+                    disabled={!getNextStatus(order.status)}
                     onChange={() => toggleOrder(order.id)}
                   />
                 </td>
@@ -572,10 +666,10 @@ export function AdminOrdersClient() {
                     <button
                       type="button"
                       className="rounded bg-zinc-950 px-3 py-1.5 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:bg-zinc-300"
-                      disabled={order.status === "SHIPPED" || isProcessing}
-                      onClick={() => void completeSingleShipping(order.id)}
+                      disabled={!getNextStatus(order.status) || isProcessing}
+                      onClick={() => void advanceSingleStatus(order)}
                     >
-                      {getShippingButtonLabel(order.status)}
+                      {getStatusActionLabel(order.status)}
                     </button>
                   </div>
                 </td>
@@ -644,7 +738,7 @@ export function AdminOrdersClient() {
           order={selectedOrderDetail}
           isProcessing={isProcessing}
           onClose={() => setSelectedOrderDetail(null)}
-          onShip={(id) => void completeSingleShipping(id)}
+          onAdvanceStatus={(order) => void advanceSingleStatus(order)}
         />
       )}
     </section>
