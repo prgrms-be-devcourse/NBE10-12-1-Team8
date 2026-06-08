@@ -2,12 +2,11 @@ package com.backend.domain.order.order.controller;
 
 import com.backend.domain.order.order.dto.OrderCreateRequest;
 import com.backend.domain.order.order.dto.OrderCreateResponse;
+import com.backend.domain.order.order.dto.OrderModifyRequest;
 import com.backend.domain.order.order.dto.OrderResponse;
 import com.backend.domain.order.order.entity.Order;
 import com.backend.domain.order.order.service.OrderService;
-import com.backend.domain.order.order.dto.OrderModifyRequest;
 import com.backend.global.rsData.RsData;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -44,8 +43,11 @@ public class OrderController {
 
     @GetMapping
     public ResponseEntity<RsData<List<OrderResponse>>> findByEmail(
-            @RequestParam String email
+            @RequestParam(required = false, defaultValue = "") String email
     ) {
+        if (email.isBlank()) {
+            return ResponseEntity.ok(RsData.of("200", "주문 목록 조회 성공", List.of()));
+        }
         List<OrderResponse> orders = orderService.findByEmail(email).stream().map(OrderResponse::from).toList();
         return ResponseEntity.ok(
                 RsData.of(
@@ -68,6 +70,7 @@ public class OrderController {
                 )
         );
     }
+
     @PutMapping("/{id}")
     public ResponseEntity<RsData<OrderCreateResponse>> modifyOrder(
             @PathVariable Long id,

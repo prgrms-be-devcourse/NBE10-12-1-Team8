@@ -37,8 +37,12 @@ public class OrderService {
     @Transactional
     public Order create(String email, String address, String zipcode, List<OrderItemRequest> items) {
         LocalDateTime shippingDate = calculateShippingDate();
-        Order order = orderRepository.findExistingOrder(email, shippingDate, address, zipcode)
-                .orElseGet(() -> save(email, address, zipcode));
+
+        if (orderRepository.findExistingOrder(email, shippingDate, address, zipcode).isPresent()) {
+            throw new IllegalStateException("동일한 배송 정보로 이미 주문이 존재합니다. 기존 주문을 취소 후 다시 주문해주세요.");
+        }
+
+        Order order = new Order(email, shippingDate, address, zipcode, LocalDateTime.now());
         for (OrderItemRequest item : items) {
             Product product = productRepository.findById(item.productId())
                     .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다: " + item.productId()));

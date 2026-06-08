@@ -16,6 +16,7 @@ export default function ShopPage() {
   const [postcode, setPostcode] = useState('');
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderResult, setOrderResult] = useState<'success' | 'error' | null>(null);
+  const [orderErrorMessage, setOrderErrorMessage] = useState<string | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -65,6 +66,7 @@ export default function ShopPage() {
     if (!canOrder) return;
     setIsOrdering(true);
     setOrderResult(null);
+    setOrderErrorMessage(null);
     try {
       const res = await fetch('/api/orders', {
         method: 'POST',
@@ -83,9 +85,12 @@ export default function ShopPage() {
         setAddress('');
         setPostcode('');
       } else {
+        const data = await res.json().catch(() => null);
+        setOrderErrorMessage(data?.message ?? '주문에 실패했습니다. 다시 시도해주세요.');
         setOrderResult('error');
       }
     } catch {
+      setOrderErrorMessage('주문에 실패했습니다. 다시 시도해주세요.');
       setOrderResult('error');
     } finally {
       setIsOrdering(false);
@@ -141,6 +146,7 @@ export default function ShopPage() {
               postcode={postcode}
               isOrdering={isOrdering}
               orderResult={orderResult}
+              errorMessage={orderErrorMessage}
               canOrder={canOrder}
               onChangeCartQuantity={changeCartQty}
               onRemoveFromCart={removeFromCart}
@@ -148,7 +154,7 @@ export default function ShopPage() {
               onAddressChange={setAddress}
               onPostcodeChange={setPostcode}
               onOrder={handleOrder}
-              onDismissResult={() => setOrderResult(null)}
+              onDismissResult={() => { setOrderResult(null); setOrderErrorMessage(null); }}
             />
           </aside>
         </div>

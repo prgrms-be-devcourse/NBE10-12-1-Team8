@@ -8,6 +8,7 @@ export function CartSection({
   postcode,
   isOrdering,
   orderResult,
+  errorMessage,
   canOrder,
   onChangeCartQuantity,
   onRemoveFromCart,
@@ -24,6 +25,7 @@ export function CartSection({
   postcode: string;
   isOrdering: boolean;
   orderResult: 'success' | 'error' | null;
+  errorMessage: string | null;
   canOrder: boolean;
   onChangeCartQuantity: (productId: number, delta: number) => void;
   onRemoveFromCart: (productId: number) => void;
@@ -144,7 +146,9 @@ export function CartSection({
         )}
         {orderResult === 'error' && (
           <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 flex items-start justify-between gap-2">
-            <p className="text-sm text-red-700 font-medium">주문에 실패했습니다. 다시 시도해주세요.</p>
+            <p className="text-sm text-red-700 font-medium">
+              {errorMessage ?? '주문에 실패했습니다. 다시 시도해주세요.'}
+            </p>
             <button onClick={onDismissResult} className="text-red-400 hover:text-red-600 text-xl leading-none shrink-0">×</button>
           </div>
         )}
