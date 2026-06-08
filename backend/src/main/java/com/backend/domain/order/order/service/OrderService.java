@@ -19,21 +19,26 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
 
+    private LocalDateTime calculateShippingDate() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime cutoff = now.toLocalDate().atTime(14, 0);
+        return now.isBefore(cutoff)
+                ? now.toLocalDate().atStartOfDay()
+                : now.toLocalDate().plusDays(1).atStartOfDay();
+    }
+
     @Transactional
     public Order save(String email, String address, String zipcode) {
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime cutoff = now.toLocalDate().atTime(14, 0);
-
-        LocalDateTime shippingDate = now.isBefore(cutoff)
-                ? now.toLocalDate().atStartOfDay()
-                : now.toLocalDate().plusDays(1).atStartOfDay();
-
+        LocalDateTime shippingDate = calculateShippingDate();
         return orderRepository.save(new Order(email, shippingDate, address, zipcode, now));
     }
 
     @Transactional
     public Order create(String email, String address, String zipcode, List<OrderItemRequest> items) {
-        Order order = save(email, address, zipcode);
+        LocalDateTime shippingDate = calculateShippingDate();
+        Order order = orderRepository.findExistingOrder(email, shippingDate, address, zipcode)
+                .orElseGet(() -> save(email, address, zipcode));
         for (OrderItemRequest item : items) {
             Product product = productRepository.findById(item.productId())
                     .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다: " + item.productId()));
