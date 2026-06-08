@@ -1,3 +1,10 @@
 package com.backend.domain.order.order.dto;
 
-public record OrderItemRequest(Long productId, int quantity) {}
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
+public record OrderItemRequest(
+        @NotNull
+        Long productId,
+        @Min(1)
+        int quantity) {}

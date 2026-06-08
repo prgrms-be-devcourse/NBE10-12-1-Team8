@@ -1,6 +1,8 @@
 package com.backend.domain.order.order.dto;
 
 import com.backend.domain.order.order.entity.Order;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDateTime;
 
