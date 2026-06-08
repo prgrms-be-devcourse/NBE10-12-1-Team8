@@ -7,7 +7,6 @@ interface Product {
   name: string;
   description: string;
   price: number;
-  category: string;
   imageUrl?: string;
 }
 
@@ -25,7 +24,6 @@ const MOCK_PRODUCTS: Product[] = [
     name: 'Colombia Narino',
     description: '달콤한 카라멜과 견과류의 부드러운 맛. 균형 잡힌 미디엄 로스트.',
     price: 12000,
-    category: 'COFFEE_BEAN_PACKAGE',
     imageUrl:
       'https://images.unsplash.com/photo-1698093135407-8f50f3a52fe2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
   },
@@ -34,7 +32,6 @@ const MOCK_PRODUCTS: Product[] = [
     name: 'Ethiopia Yirgacheffe',
     description: '꽃향기와 베리의 과일향이 풍부한 밝은 산미. 라이트 로스트.',
     price: 15000,
-    category: 'COFFEE_BEAN_PACKAGE',
     imageUrl:
       'https://images.unsplash.com/photo-1666873903780-396269c73a54?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
   },
@@ -43,7 +40,6 @@ const MOCK_PRODUCTS: Product[] = [
     name: 'Guatemala Antigua',
     description: '다크 초콜릿과 스파이시한 향의 미디엄-다크 로스트.',
     price: 13000,
-    category: 'COFFEE_BEAN_PACKAGE',
     imageUrl:
       'https://images.unsplash.com/photo-1765896977022-3079fd6bce8d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
   },
@@ -52,7 +48,6 @@ const MOCK_PRODUCTS: Product[] = [
     name: 'Sumatra Mandheling',
     description: '흙내음과 깊은 풀바디, 스모키한 다크 로스트.',
     price: 14000,
-    category: 'COFFEE_BEAN_PACKAGE',
     imageUrl:
       'https://images.unsplash.com/photo-1666873975263-0c0e24c1a2f4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080',
   },
@@ -148,6 +143,7 @@ function CartSection({
   items,
   total,
   email,
+  address,
   postcode,
   isOrdering,
   orderResult,
@@ -155,6 +151,7 @@ function CartSection({
   onChangeCartQuantity,
   onRemoveFromCart,
   onEmailChange,
+  onAddressChange,
   onPostcodeChange,
   onOrder,
   onDismissResult,
@@ -162,6 +159,7 @@ function CartSection({
   items: CartItem[];
   total: number;
   email: string;
+  address: string;
   postcode: string;
   isOrdering: boolean;
   orderResult: 'success' | 'error' | null;
@@ -169,6 +167,7 @@ function CartSection({
   onChangeCartQuantity: (productId: number, delta: number) => void;
   onRemoveFromCart: (productId: number) => void;
   onEmailChange: (v: string) => void;
+  onAddressChange: (v: string) => void;
   onPostcodeChange: (v: string) => void;
   onOrder: () => void;
   onDismissResult: () => void;
@@ -283,6 +282,20 @@ function CartSection({
               onChange={(e) => onEmailChange(e.target.value)}
               placeholder="example@email.com"
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all"
+              suppressHydrationWarning
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-900 mb-1.5">
+              주소 <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => onAddressChange(e.target.value)}
+              placeholder="서울특별시 강남구 테헤란로 123"
+              className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all"
+              suppressHydrationWarning
             />
           </div>
           <div>
@@ -296,6 +309,7 @@ function CartSection({
               placeholder="12345"
               maxLength={6}
               className="w-full border border-gray-200 rounded-xl px-3.5 py-2.5 text-sm text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-2 focus:ring-black/10 transition-all"
+              suppressHydrationWarning
             />
           </div>
         </div>
@@ -337,7 +351,7 @@ function CartSection({
 
         {items.length > 0 && !canOrder && !isOrdering && (
           <p className="text-xs text-center text-gray-400">
-            이메일과 우편번호를 입력하면 주문할 수 있습니다.
+            이메일, 주소, 우편번호를 입력하면 주문할 수 있습니다.
           </p>
         )}
       </div>
@@ -350,15 +364,17 @@ export default function ShopPage() {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
   const [cart, setCart] = useState<CartItem[]>([]);
   const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
   const [postcode, setPostcode] = useState('');
   const [isOrdering, setIsOrdering] = useState(false);
   const [orderResult, setOrderResult] = useState<'success' | 'error' | null>(null);
 
   useEffect(() => {
-    fetch('/api/v1/products')
+    fetch('/api/products')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) setProducts(data);
+        const list = data?.data;
+        if (Array.isArray(list) && list.length > 0) setProducts(list);
       })
       .catch(() => {});
   }, []);
@@ -396,27 +412,28 @@ export default function ShopPage() {
   };
 
   const total = cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const canOrder = cart.length > 0 && email.trim() !== '' && postcode.trim() !== '';
+  const canOrder = cart.length > 0 && email.trim() !== '' && address.trim() !== '' && postcode.trim() !== '';
 
   const handleOrder = async () => {
     if (!canOrder) return;
     setIsOrdering(true);
     setOrderResult(null);
     try {
-      const res = await fetch('/api/v1/orders', {
+      const res = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
-          address: postcode,
-          postcode,
-          orderItems: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
+          address,
+          zipcode: postcode,
+          items: cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
         }),
       });
       if (res.ok) {
         setOrderResult('success');
         setCart([]);
         setEmail('');
+        setAddress('');
         setPostcode('');
       } else {
         setOrderResult('error');
@@ -469,6 +486,7 @@ export default function ShopPage() {
               items={cart}
               total={total}
               email={email}
+              address={address}
               postcode={postcode}
               isOrdering={isOrdering}
               orderResult={orderResult}
@@ -476,6 +494,7 @@ export default function ShopPage() {
               onChangeCartQuantity={changeCartQty}
               onRemoveFromCart={removeFromCart}
               onEmailChange={setEmail}
+              onAddressChange={setAddress}
               onPostcodeChange={setPostcode}
               onOrder={handleOrder}
               onDismissResult={() => setOrderResult(null)}
