@@ -19,7 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -93,6 +95,28 @@ public class AdminOrderControllerTest {
         shippedOrder.addUpdateOrderItem(ethiopia, 1);
         shippedOrder.updateStatus(OrderStatus.SHIPPED);
         shippedOrderId = orderRepository.save(shippedOrder).getId();
+
+        Order deliveredOrder = new Order(
+                "delivered@test.com",
+                now.toLocalDate().atStartOfDay(),
+                "광주 북구 무등로 200",
+                "61234",
+                now.minusHours(4)
+        );
+        deliveredOrder.addUpdateOrderItem(ethiopia, 1);
+        deliveredOrder.updateStatus(OrderStatus.DELIVERED);
+        orderRepository.save(deliveredOrder);
+
+        Order canceledOrder = new Order(
+                "canceled@test.com",
+                now.toLocalDate().atStartOfDay(),
+                "울산 남구 삼산로 300",
+                "44705",
+                now.minusHours(5)
+        );
+        canceledOrder.addUpdateOrderItem(colombia, 1);
+        canceledOrder.updateStatus(OrderStatus.CANCELED);
+        orderRepository.save(canceledOrder);
     }
 
     @Test
@@ -129,7 +153,12 @@ public class AdminOrderControllerTest {
                 .andExpect(jsonPath("$.resultCode").value("200"))
                 .andExpect(jsonPath("$.message").value("오늘 처리 주문 조회 성공"))
                 .andExpect(jsonPath("$.data").isArray())
-                .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(2)));
+                .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(2)))
+                .andExpect(jsonPath("$.data[*].email", hasItem("today@test.com")))
+                .andExpect(jsonPath("$.data[*].email", hasItem("shipped@test.com")))
+                .andExpect(jsonPath("$.data[*].email", not(hasItem("tomorrow@test.com"))))
+                .andExpect(jsonPath("$.data[*].email", not(hasItem("delivered@test.com"))))
+                .andExpect(jsonPath("$.data[*].email", not(hasItem("canceled@test.com"))));
     }
 
     @Test
@@ -183,6 +212,53 @@ public class AdminOrderControllerTest {
     }
 
     @Test
+    @DisplayName("A-05-2: 주문 상태를 배송준비중으로 변경 성공")
+    void t5_2() throws Exception {
+        String requestBody = """
+                {
+                    "status": "PREPARING_SHIPMENT"
+                }
+                """;
+
+        mvc.perform(patch("/api/admin/orders/" + todayOrderId + "/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200"))
+                .andExpect(jsonPath("$.message").value("주문 상태 변경 성공"))
+                .andExpect(jsonPath("$.data.id").value(todayOrderId))
+                .andExpect(jsonPath("$.data.status").value("PREPARING_SHIPMENT"));
+    }
+
+    @Test
+    @DisplayName("A-05-3: 잘못된 주문 상태로 변경 시 404")
+    void t5_3() throws Exception {
+        String requestBody = """
+                {
+                    "status": "INVALID_STATUS"
+                }
+                """;
+
+        mvc.perform(patch("/api/admin/orders/" + todayOrderId + "/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.resultCode").value("404"))
+                .andExpect(jsonPath("$.message").value("No enum constant com.backend.domain.order.order.entity.OrderStatus.INVALID_STATUS"));
+    }
+
+    @Test
+    @DisplayName("A-05-4: 상태 변경 요청 본문이 비어 있으면 500")
+    void t5_4() throws Exception {
+        mvc.perform(patch("/api/admin/orders/" + todayOrderId + "/status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.resultCode").value("500"))
+                .andExpect(jsonPath("$.message").value("서버 오류가 발생했습니다."));
+    }
+
+    @Test
     @DisplayName("A-06: 일괄 배송 완료 처리 성공")
     void t6() throws Exception {
         String requestBody = """
@@ -200,6 +276,51 @@ public class AdminOrderControllerTest {
                 .andExpect(jsonPath("$.data.processedCount").value(2))
                 .andExpect(jsonPath("$.data.orderIds").isArray())
                 .andExpect(jsonPath("$.data.orderIds", hasSize(2)));
+    }
+
+    @Test
+    @DisplayName("A-06-1: 빈 주문 목록 일괄 배송 완료 처리 시 processedCount 0")
+    void t6_1() throws Exception {
+        String requestBody = """
+                {
+                    "orderIds": []
+                }
+                """;
+
+        mvc.perform(put("/api/admin/orders/shipped")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resultCode").value("200"))
+                .andExpect(jsonPath("$.message").value("일괄 배송 완료 처리 성공"))
+                .andExpect(jsonPath("$.data.processedCount").value(0))
+                .andExpect(jsonPath("$.data.orderIds").isArray())
+                .andExpect(jsonPath("$.data.orderIds", hasSize(0)));
+    }
+
+    @Test
+    @DisplayName("A-06-2: 일괄 배송 완료 처리 후 대상 주문 상태가 SHIPPED로 저장됨")
+    void t6_2() throws Exception {
+        String requestBody = """
+                {
+                    "orderIds": [%d, %d]
+                }
+                """.formatted(todayOrderId, tomorrowOrderId);
+
+        mvc.perform(put("/api/admin/orders/shipped")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        orderRepository.flush();
+
+        mvc.perform(get("/api/admin/orders/" + todayOrderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SHIPPED"));
+
+        mvc.perform(get("/api/admin/orders/" + tomorrowOrderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("SHIPPED"));
     }
 
     @Test
