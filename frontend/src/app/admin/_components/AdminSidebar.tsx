@@ -9,6 +9,10 @@ const menuItems = [
     href: "/admin/orders",
   },
   {
+    label: "통계",
+    href: "/admin/statistics",
+  },
+  {
     label: "상품 관리",
     href: "/admin/products",
   },
