@@ -349,17 +349,17 @@ public class OrderControllerTest {
     }
 
     @Test
-    @DisplayName("이메일, 주소, 우편번호가 같아도 14시 전후 배송예정일이 다르면 다른 주문")
+    @DisplayName("이메일, 주소, 우편번호가 같아도 13시 59분 59초와 14시 정각은 다른 주문")
     public void t7() throws Exception {
         String requestBody = orderRequest("cutoff-rule@test.com", "서울 종로구 종로 1", "03154");
 
-        clock.set(LocalDateTime.of(2026, 6, 9, 14, 0));
+        clock.set(LocalDateTime.of(2026, 6, 9, 13, 59, 59));
         mvc.perform(post("/api/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk());
 
-        clock.set(LocalDateTime.of(2026, 6, 9, 14, 0, 1));
+        clock.set(LocalDateTime.of(2026, 6, 9, 14, 0));
         mvc.perform(post("/api/orders")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))

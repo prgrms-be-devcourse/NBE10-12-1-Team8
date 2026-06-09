@@ -24,8 +24,8 @@ public class OrderService {
     private LocalDateTime calculateShippingDate() {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime cutoff = now.toLocalDate().atTime(14, 0);
-        // 14:00:00까지는 당일 윈도우, 14:00:01부터 다음 윈도우
-        return !now.isAfter(cutoff)
+        // 13:59:59까지는 당일 윈도우, 14:00:00부터 다음 윈도우
+        return now.isBefore(cutoff)
                 ? now.toLocalDate().atStartOfDay()
                 : now.toLocalDate().plusDays(1).atStartOfDay();
     }
