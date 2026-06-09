@@ -192,6 +192,32 @@ public class OrderControllerTest {
     }
 
     @Test
+    @DisplayName("판매중지 상품 주문 생성 실패")
+    public void t5_1() throws Exception {
+        Product stoppedProduct = productRepository.findById(productId).orElseThrow();
+        stoppedProduct.updateSelling(false);
+        productRepository.save(stoppedProduct);
+
+        String requestBody = """
+                {
+                   "email" : "stopped@test.com",
+                   "address" : "서울 종로구 종로 1",
+                   "zipcode": "03154",
+                   "items": [{"productId": %d, "quantity": 1}]
+                }
+                """.formatted(productId);
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(handler().handlerType(OrderController.class))
+                .andExpect(handler().methodName("createOrder"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.resultCode").value("400"))
+                .andExpect(jsonPath("$.message").value("판매중지된 상품은 주문할 수 없습니다."));
+    }
+
+    @Test
     @DisplayName("같은 이메일 다른 주소 주문")
     public void t6() throws Exception {
         String requestBody1 = """
