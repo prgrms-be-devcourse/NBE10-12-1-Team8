@@ -22,7 +22,8 @@ public class OrderService {
     private LocalDateTime calculateShippingDate() {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime cutoff = now.toLocalDate().atTime(14, 0);
-        return now.isBefore(cutoff)
+        // 14:00:00까지는 당일 윈도우, 14:00:01부터 다음 윈도우
+        return !now.isAfter(cutoff)
                 ? now.toLocalDate().atStartOfDay()
                 : now.toLocalDate().plusDays(1).atStartOfDay();
     }
@@ -38,11 +39,15 @@ public class OrderService {
     public Order create(String email, String address, String zipcode, List<OrderItemRequest> items) {
         LocalDateTime shippingDate = calculateShippingDate();
 
-        if (orderRepository.findExistingOrder(email, shippingDate, address, zipcode).isPresent()) {
-            throw new IllegalStateException("동일한 배송 정보로 이미 주문이 존재합니다. 기존 주문을 취소 후 다시 주문해주세요.");
-        }
+        Order order = orderRepository.findExistingOrder(email, shippingDate, address, zipcode, OrderStatus.CANCELED)
+                .map(existing -> {
+                    if (existing.getStatus() != OrderStatus.ORDERED) {
+                        throw new IllegalStateException("이미 처리 중인 주문이 있어 합산할 수 없습니다.");
+                    }
+                    return existing;
+                })
+                .orElseGet(() -> new Order(email, shippingDate, address, zipcode, LocalDateTime.now()));
 
-        Order order = new Order(email, shippingDate, address, zipcode, LocalDateTime.now());
         for (OrderItemRequest item : items) {
             Product product = productRepository.findById(item.productId())
                     .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다: " + item.productId()));

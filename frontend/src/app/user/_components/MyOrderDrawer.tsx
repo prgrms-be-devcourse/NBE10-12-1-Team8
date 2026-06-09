@@ -61,7 +61,7 @@ export function MyOrderDrawer({ onClose }: { onClose: () => void }) {
     setIsCancelling(true);
     try {
       await cancelOrder(cancelTarget.id);
-      setOrders((prev) => prev.filter((o) => o.id !== cancelTarget.id));
+      setOrders((prev) => prev.map((o) => o.id === cancelTarget!.id ? { ...o, status: 'CANCELED' as const } : o));
       setCancelTarget(null);
       showToast('주문이 취소되었습니다.', 'success');
     } catch {
@@ -184,10 +184,12 @@ export function MyOrderDrawer({ onClose }: { onClose: () => void }) {
                         <span className="text-gray-400 shrink-0">배송지</span>
                         <span className="text-gray-600">{order.address} ({order.zipcode})</span>
                       </div>
-                      <div className="flex gap-2 text-xs">
-                        <span className="text-gray-400 shrink-0">배송일</span>
-                        <span className="text-gray-600">{formatDateTime(order.shippingDate)}</span>
-                      </div>
+                      {(order.status === 'SHIPPED' || order.status === 'DELIVERED') && (
+                        <div className="flex gap-2 text-xs">
+                          <span className="text-gray-400 shrink-0">배송 출발일</span>
+                          <span className="text-gray-600">{order.shippingDate.slice(0, 10)}</span>
+                        </div>
+                      )}
                     </div>
 
                     {order.status === 'ORDERED' ? (
@@ -207,7 +209,13 @@ export function MyOrderDrawer({ onClose }: { onClose: () => void }) {
                       </div>
                     ) : (
                       <div className="px-4 py-2.5 border-t border-gray-100">
-                        <p className="text-xs text-center text-gray-400">배송이 시작되어 수정이 불가합니다.</p>
+                        <p className="text-xs text-center text-gray-400">
+                          {order.status === 'CONFIRMED' && '주문이 확인되어 수정이 불가합니다.'}
+                          {order.status === 'PREPARING_SHIPMENT' && '배송 준비중으로 수정이 불가합니다.'}
+                          {order.status === 'SHIPPED' && '배송중으로 수정이 불가합니다.'}
+                          {order.status === 'DELIVERED' && '배송이 완료된 주문입니다.'}
+                          {order.status === 'CANCELED' && '취소된 주문입니다.'}
+                        </p>
                       </div>
                     )}
                   </div>

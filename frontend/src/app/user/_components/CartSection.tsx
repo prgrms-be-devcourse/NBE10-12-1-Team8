@@ -1,5 +1,17 @@
 import type { CartItem } from '../_types';
 
+function getShippingInfo() {
+  const now = new Date();
+  // 14:00:00까지는 당일 윈도우, 14:00:01부터 다음 윈도우
+  const totalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const isBeforeCutoff = totalSeconds <= 14 * 3600;
+  const shippingDate = new Date(now);
+  shippingDate.setDate(shippingDate.getDate() + (isBeforeCutoff ? 1 : 2));
+  const month = shippingDate.getMonth() + 1;
+  const day = shippingDate.getDate();
+  return { dateStr: `${month}월 ${day}일`, isBeforeCutoff };
+}
+
 export function CartSection({
   items,
   total,
@@ -36,6 +48,7 @@ export function CartSection({
   onDismissResult: () => void;
 }) {
   const totalCount = items.reduce((s, i) => s + i.quantity, 0);
+  const { dateStr, isBeforeCutoff } = getShippingInfo();
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -95,7 +108,14 @@ export function CartSection({
 
         <div className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 flex gap-2 items-start">
           <span className="text-sm mt-0.5">⏰</span>
-          <p className="text-xs text-gray-600 leading-relaxed font-medium">오후 2시 이후 주문은 다음 날 배송이 시작됩니다.</p>
+          <div className="text-xs text-gray-600 leading-relaxed font-medium space-y-1">
+            <p>
+              {isBeforeCutoff
+                ? `오늘 오후 2시 이전 주문은 ${dateStr} 배송이 시작됩니다.`
+                : `오후 2시가 지났습니다. ${dateStr} 배송이 시작됩니다.`}
+            </p>
+            <p className="text-gray-500">같은 이메일·주소·우편번호로 주문하면 같은 배송으로 합산됩니다.</p>
+          </div>
         </div>
 
         <div className="space-y-3">

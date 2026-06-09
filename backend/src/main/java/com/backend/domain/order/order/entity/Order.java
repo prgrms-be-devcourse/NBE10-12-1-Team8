@@ -14,14 +14,7 @@ import java.util.List;
 
 @Entity
 @Getter
-@Table(
-        name = "orders",
-        uniqueConstraints = {
-                @UniqueConstraint(columnNames = {
-                        "email", "shipping_date", "zipcode", "address"
-                })
-        }
-)
+@Table(name = "orders")
 @NoArgsConstructor
 public class Order extends BaseEntity {
     @Column(nullable = false)
