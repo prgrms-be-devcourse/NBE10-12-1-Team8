@@ -9,6 +9,9 @@ spring:
     console:
       enabled: false
 
+  flyway:
+    enabled: false
+
   jpa:
     hibernate:
       ddl-auto: create-drop
