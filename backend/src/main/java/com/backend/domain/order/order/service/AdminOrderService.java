@@ -24,7 +24,7 @@ public class AdminOrderService {
     public List<Order> findTodayOrders() {
         LocalDate today = LocalDate.now();
         return orderRepository.findAll().stream()
-                .filter(order -> isTodayWorkStatus(order.getStatus()))
+                .filter(order -> isTodayVisibleStatus(order.getStatus()))
                 .filter(order -> !order.getShippingDate().toLocalDate().isAfter(today))
                 .toList();
     }
@@ -47,7 +47,7 @@ public class AdminOrderService {
                 .toList();
     }
 
-    private boolean isTodayWorkStatus(OrderStatus status) {
-        return status != OrderStatus.DELIVERED && status != OrderStatus.CANCELED;
+    private boolean isTodayVisibleStatus(OrderStatus status) {
+        return status != OrderStatus.CANCELED;
     }
 }
