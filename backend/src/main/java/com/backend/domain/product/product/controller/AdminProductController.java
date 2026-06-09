@@ -4,6 +4,7 @@ import com.backend.domain.product.product.dto.AdminProductCreateRequest;
 import com.backend.domain.product.product.dto.AdminProductDetailResponse;
 import com.backend.domain.product.product.dto.AdminProductImageUploadResponse;
 import com.backend.domain.product.product.dto.AdminProductResponse;
+import com.backend.domain.product.product.dto.AdminProductSalesStatusRequest;
 import com.backend.domain.product.product.dto.AdminProductUpdateRequest;
 import com.backend.domain.product.product.entity.Product;
 import com.backend.domain.product.product.service.AdminProductService;
@@ -23,7 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@Tag(name = "관리자 상품 API", description = "관리자 상품 등록/조회/수정/삭제")
+@Tag(name = "관리자 상품 API", description = "관리자 상품 등록/조회/수정/판매상태 관리")
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/admin/products")
@@ -107,15 +108,16 @@ public class AdminProductController {
         return ResponseEntity.ok(RsData.of("200", "상품 수정 성공", AdminProductResponse.from(product)));
     }
 
-    @Operation(summary = "상품 삭제", description = "상품을 삭제합니다.")
+    @Operation(summary = "상품 판매상태 변경", description = "상품을 판매중 또는 판매중지 상태로 변경합니다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(responseCode = "200", description = "판매상태 변경 성공"),
             @ApiResponse(responseCode = "404", description = "상품 없음")
     })
-    @DeleteMapping("/{id}")
-    public ResponseEntity<RsData<Void>> deleteProduct(
-            @Parameter(description = "상품 ID", example = "1") @PathVariable Long id) {
-        adminProductService.delete(id);
-        return ResponseEntity.ok(RsData.of("200", "상품 삭제 성공"));
+    @PatchMapping("/{id}/sales-status")
+    public ResponseEntity<RsData<AdminProductResponse>> updateSalesStatus(
+            @Parameter(description = "상품 ID", example = "1") @PathVariable Long id,
+            @Valid @RequestBody AdminProductSalesStatusRequest request) {
+        Product product = adminProductService.updateSalesStatus(id, request.selling());
+        return ResponseEntity.ok(RsData.of("200", "상품 판매상태 변경 성공", AdminProductResponse.from(product)));
     }
 }

@@ -2,11 +2,11 @@
 
 import {
   createAdminProduct,
-  deleteAdminProduct,
   getAdminProduct,
   getAdminProducts,
   uploadAdminProductImage,
   updateAdminProduct,
+  updateAdminProductSalesStatus,
 } from "@/api/adminProduct";
 import type {
   AdminProductDetailResponse,
@@ -78,20 +78,18 @@ function ProductImage({
   className?: string;
   fit?: "cover" | "contain";
 }) {
-  const [hasError, setHasError] = useState(false);
-
-  useEffect(() => {
-    setHasError(false);
-  }, [imageUrl]);
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const imageSrc =
+    imageUrl && failedImageUrl !== imageUrl ? imageUrl : IMAGE_FALLBACK_SRC;
 
   return (
     <img
-      src={!imageUrl || hasError ? IMAGE_FALLBACK_SRC : imageUrl}
+      src={imageSrc}
       alt={name}
       className={`${className} rounded border border-zinc-200 bg-zinc-100 ${
         fit === "contain" ? "object-contain" : "object-cover"
       }`}
-      onError={() => setHasError(true)}
+      onError={() => setFailedImageUrl(imageUrl)}
     />
   );
 }
@@ -298,17 +296,19 @@ function ProductFormModal({
   );
 }
 
-function DeleteConfirmModal({
+function SalesStatusConfirmModal({
   product,
   isProcessing,
   onClose,
-  onDelete,
+  onUpdateStatus,
 }: {
   product: AdminProductDetailResponse;
   isProcessing: boolean;
   onClose: () => void;
-  onDelete: () => void;
+  onUpdateStatus: () => void;
 }) {
+  const nextSelling = !product.selling;
+
   return (
     <div
       className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-zinc-950/45 p-6"
@@ -323,9 +323,11 @@ function DeleteConfirmModal({
       >
         <header className="flex items-start justify-between border-b border-zinc-200 px-6 py-5">
           <div>
-            <h3 className="text-lg font-bold">상품 삭제</h3>
+            <h3 className="text-lg font-bold">
+              {nextSelling ? "상품 판매재개" : "상품 판매중지"}
+            </h3>
             <p className="mt-1 text-sm text-zinc-500">
-              선택한 상품을 삭제합니다.
+              선택한 상품의 판매상태를 변경합니다.
             </p>
           </div>
           <button
@@ -338,13 +340,15 @@ function DeleteConfirmModal({
         </header>
 
         <div className="px-6 py-5">
-          <p className="text-sm">이 상품을 정말 삭제하시겠습니까?</p>
+          <p className="text-sm">
+            이 상품을 {nextSelling ? "판매재개" : "판매중지"}하시겠습니까?
+          </p>
           <div className="mt-4 rounded border border-zinc-200 bg-zinc-50 px-4 py-3">
             <p className="font-semibold">{product.name}</p>
             <p className="mt-1 text-sm text-zinc-500">상품 ID: #{product.id}</p>
           </div>
           <p className="mt-4 text-sm text-zinc-500">
-            이 작업은 되돌릴 수 없습니다.
+            판매중지 상품은 사용자 상품 목록에 노출되지 않습니다.
           </p>
         </div>
 
@@ -360,9 +364,9 @@ function DeleteConfirmModal({
             type="button"
             className="rounded bg-zinc-950 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-zinc-300"
             disabled={isProcessing}
-            onClick={onDelete}
+            onClick={onUpdateStatus}
           >
-            삭제
+            {nextSelling ? "판매재개" : "판매중지"}
           </button>
         </footer>
       </section>
@@ -378,7 +382,7 @@ export function AdminProductsClient() {
   const [formErrors, setFormErrors] = useState<ProductFormErrors>({});
   const [editingProduct, setEditingProduct] =
     useState<AdminProductDetailResponse | null>(null);
-  const [deletingProduct, setDeletingProduct] =
+  const [salesStatusProduct, setSalesStatusProduct] =
     useState<AdminProductDetailResponse | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -461,33 +465,30 @@ export function AdminProductsClient() {
     1,
     Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE),
   );
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalPages));
-  }, [totalPages]);
+  const boundedCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedProducts = useMemo(() => {
-    const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+    const startIndex = (boundedCurrentPage - 1) * PRODUCTS_PER_PAGE;
 
     return filteredProducts.slice(startIndex, startIndex + PRODUCTS_PER_PAGE);
-  }, [currentPage, filteredProducts]);
+  }, [boundedCurrentPage, filteredProducts]);
 
   const pageNumbers = useMemo(() => {
-    const endPage = Math.min(totalPages, Math.max(5, currentPage + 2));
-    const startPage = Math.max(1, Math.min(currentPage - 2, endPage - 4));
+    const endPage = Math.min(totalPages, Math.max(5, boundedCurrentPage + 2));
+    const startPage = Math.max(1, Math.min(boundedCurrentPage - 2, endPage - 4));
 
     return Array.from(
       { length: endPage - startPage + 1 },
       (_, index) => startPage + index,
     );
-  }, [currentPage, totalPages]);
+  }, [boundedCurrentPage, totalPages]);
 
   const visibleStart =
     filteredProducts.length === 0
       ? 0
-      : (currentPage - 1) * PRODUCTS_PER_PAGE + 1;
+      : (boundedCurrentPage - 1) * PRODUCTS_PER_PAGE + 1;
   const visibleEnd = Math.min(
-    currentPage * PRODUCTS_PER_PAGE,
+    boundedCurrentPage * PRODUCTS_PER_PAGE,
     filteredProducts.length,
   );
 
@@ -647,8 +648,8 @@ export function AdminProductsClient() {
     }
   };
 
-  const confirmDelete = async () => {
-    if (!deletingProduct) {
+  const confirmSalesStatusUpdate = async () => {
+    if (!salesStatusProduct) {
       return;
     }
 
@@ -656,11 +657,13 @@ export function AdminProductsClient() {
     setErrorMessage("");
 
     try {
-      await deleteAdminProduct(deletingProduct.id);
-      setDeletingProduct(null);
+      await updateAdminProductSalesStatus(salesStatusProduct.id, {
+        selling: !salesStatusProduct.selling,
+      });
+      setSalesStatusProduct(null);
       await loadProducts();
     } catch {
-      setErrorMessage("상품 삭제에 실패했습니다.");
+      setErrorMessage("상품 판매상태 변경에 실패했습니다.");
     } finally {
       setIsProcessing(false);
     }
@@ -714,6 +717,7 @@ export function AdminProductsClient() {
               <th className="w-16 px-4 py-3 font-semibold">ID</th>
               <th className="w-20 px-4 py-3 font-semibold">이미지</th>
               <th className="w-56 px-4 py-3 font-semibold">상품명</th>
+              <th className="w-24 px-4 py-3 font-semibold">상태</th>
               <th className="w-32 px-4 py-3 text-right font-semibold">가격</th>
               <th className="px-4 py-3 font-semibold">설명</th>
               <th className="w-32 px-4 py-3 font-semibold">등록일</th>
@@ -730,6 +734,17 @@ export function AdminProductsClient() {
                 </td>
                 <td className="truncate px-4 py-3 font-semibold">
                   {product.name}
+                </td>
+                <td className="px-4 py-3">
+                  <span
+                    className={`inline-flex rounded px-2 py-1 text-xs font-semibold ${
+                      product.selling
+                        ? "bg-emerald-50 text-emerald-700"
+                        : "bg-zinc-100 text-zinc-500"
+                    }`}
+                  >
+                    {product.selling ? "판매중" : "판매중지"}
+                  </span>
                 </td>
                 <td className="px-4 py-3 text-right font-medium">
                   {formatPrice(product.price)}원
@@ -755,9 +770,9 @@ export function AdminProductsClient() {
                     <button
                       type="button"
                       className="rounded border border-zinc-300 px-3 py-1.5 text-xs font-semibold text-zinc-600"
-                      onClick={() => setDeletingProduct(product)}
+                      onClick={() => setSalesStatusProduct(product)}
                     >
-                      삭제
+                      {product.selling ? "판매중지" : "판매재개"}
                     </button>
                   </div>
                 </td>
@@ -802,7 +817,7 @@ export function AdminProductsClient() {
               <button
                 type="button"
                 className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
-                disabled={currentPage === 1}
+                disabled={boundedCurrentPage === 1}
                 onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
               >
                 이전
@@ -812,7 +827,7 @@ export function AdminProductsClient() {
                   key={page}
                   type="button"
                   className={`rounded px-3 py-1.5 ${
-                    currentPage === page
+                    boundedCurrentPage === page
                       ? "bg-zinc-950 text-white"
                       : "border border-zinc-300"
                   }`}
@@ -824,7 +839,7 @@ export function AdminProductsClient() {
               <button
                 type="button"
                 className="rounded border border-zinc-300 px-3 py-1.5 disabled:cursor-not-allowed disabled:text-zinc-300"
-                disabled={currentPage === totalPages}
+                disabled={boundedCurrentPage === totalPages}
                 onClick={() =>
                   setCurrentPage((page) => Math.min(totalPages, page + 1))
                 }
@@ -855,12 +870,12 @@ export function AdminProductsClient() {
         />
       )}
 
-      {deletingProduct && (
-        <DeleteConfirmModal
-          product={deletingProduct}
+      {salesStatusProduct && (
+        <SalesStatusConfirmModal
+          product={salesStatusProduct}
           isProcessing={isProcessing}
-          onClose={() => setDeletingProduct(null)}
-          onDelete={() => void confirmDelete()}
+          onClose={() => setSalesStatusProduct(null)}
+          onUpdateStatus={() => void confirmSalesStatusUpdate()}
         />
       )}
     </section>

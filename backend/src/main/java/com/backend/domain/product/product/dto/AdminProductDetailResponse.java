@@ -13,6 +13,7 @@ public class AdminProductDetailResponse {
     private final int price;
     private final String description;
     private final String imageUrl;
+    private final boolean selling;
     private final LocalDateTime createDate;
     private final LocalDateTime modifyDate;
 
@@ -22,6 +23,7 @@ public class AdminProductDetailResponse {
         this.price = product.getPrice();
         this.description = product.getDescription();
         this.imageUrl = product.getImageUrl();
+        this.selling = product.isSelling();
         this.createDate = product.getCreateDate();
         this.modifyDate = product.getModifyDate();
     }

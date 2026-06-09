@@ -2,6 +2,7 @@ import type {
   AdminProductDetailResponse,
   AdminProductRequest,
   AdminProductResponse,
+  AdminProductSalesStatusRequest,
 } from "@/types/adminProduct";
 
 type RsData<T> = {
@@ -74,8 +75,12 @@ export function updateAdminProduct(
   });
 }
 
-export function deleteAdminProduct(id: number): Promise<void> {
-  return request<void>(`/api/admin/products/${id}`, {
-    method: "DELETE",
+export function updateAdminProductSalesStatus(
+  id: number,
+  body: AdminProductSalesStatusRequest,
+): Promise<AdminProductResponse> {
+  return request<AdminProductResponse>(`/api/admin/products/${id}/sales-status`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
   });
 }

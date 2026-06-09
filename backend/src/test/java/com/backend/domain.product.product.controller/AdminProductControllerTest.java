@@ -61,7 +61,8 @@ public class AdminProductControllerTest {
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$.data[*].id", hasItem(savedProductId.intValue())))
-                .andExpect(jsonPath("$.data[*].name", hasItem("테스트 상품")));
+                .andExpect(jsonPath("$.data[*].name", hasItem("테스트 상품")))
+                .andExpect(jsonPath("$.data[*].selling", hasItem(true)));
     }
 
     @Test
@@ -76,6 +77,7 @@ public class AdminProductControllerTest {
                 .andExpect(jsonPath("$.data.price").value(10000))
                 .andExpect(jsonPath("$.data.description").value("테스트 설명"))
                 .andExpect(jsonPath("$.data.imageUrl").value("http://test.com/image.jpg"))
+                .andExpect(jsonPath("$.data.selling").value(true))
                 .andExpect(jsonPath("$.data.createDate").exists())
                 .andExpect(jsonPath("$.data.modifyDate").exists());
     }
@@ -407,28 +409,44 @@ public class AdminProductControllerTest {
     }
 
     // ──────────────────────────────────────────
-    // A-11 ~ A-12 : 삭제
+    // A-11 ~ A-12 : 판매상태 변경
     // ──────────────────────────────────────────
 
     @Test
-    @DisplayName("A-11: 상품 삭제 성공 - data null 반환")
-    void deleteProduct() throws Exception {
-        mvc.perform(delete("/api/admin/products/" + savedProductId))
+    @DisplayName("A-11: 상품 판매중지 성공")
+    void stopSellingProduct() throws Exception {
+        String requestBody = """
+                {
+                    "selling": false
+                }
+                """;
+
+        mvc.perform(patch("/api/admin/products/" + savedProductId + "/sales-status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
-                .andExpect(jsonPath("$.message").value("상품 삭제 성공"))
-                .andExpect(jsonPath("$.data").doesNotExist());
+                .andExpect(jsonPath("$.message").value("상품 판매상태 변경 성공"))
+                .andExpect(jsonPath("$.data.id").value(savedProductId))
+                .andExpect(jsonPath("$.data.selling").value(false));
 
         mvc.perform(get("/api/admin/products/" + savedProductId))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.resultCode").value("404"))
-                .andExpect(jsonPath("$.message").value("상품을 찾을 수 없습니다. id=" + savedProductId));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.selling").value(false));
     }
 
     @Test
-    @DisplayName("A-12: 존재하지 않는 상품 삭제 시 404")
-    void deleteProduct_notFound() throws Exception {
-        mvc.perform(delete("/api/admin/products/9999"))
+    @DisplayName("A-12: 존재하지 않는 상품 판매상태 변경 시 404")
+    void updateSalesStatus_notFound() throws Exception {
+        String requestBody = """
+                {
+                    "selling": false
+                }
+                """;
+
+        mvc.perform(patch("/api/admin/products/9999/sales-status")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.resultCode").value("404"));
     }

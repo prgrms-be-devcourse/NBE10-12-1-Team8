@@ -11,6 +11,7 @@ public class AdminProductResponse {
     private final int price;
     private final String description;
     private final String imageUrl;
+    private final boolean selling;
 
     private AdminProductResponse(Product product) {
         this.id = product.getId();
@@ -18,6 +19,7 @@ public class AdminProductResponse {
         this.price = product.getPrice();
         this.description = product.getDescription();
         this.imageUrl = product.getImageUrl();
+        this.selling = product.isSelling();
     }
 
     public static AdminProductResponse from(Product product) {

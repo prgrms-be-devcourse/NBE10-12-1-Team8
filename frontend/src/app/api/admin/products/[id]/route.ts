@@ -20,11 +20,3 @@ export async function PUT(request: Request, context: RouteContext) {
     body: await request.text(),
   });
 }
-
-export async function DELETE(_request: Request, context: RouteContext) {
-  const { id } = await context.params;
-
-  return proxyBackend(`/api/admin/products/${id}`, {
-    method: "DELETE",
-  });
-}

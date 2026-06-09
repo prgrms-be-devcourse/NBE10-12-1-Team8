@@ -1,6 +1,7 @@
 package com.backend.domain.product.product.controller;
 
 import com.backend.domain.product.product.entity.Product;
+import com.backend.domain.product.product.service.AdminProductService;
 import com.backend.domain.product.product.service.ProductService;
 import jakarta.transaction.Transactional;
 import org.junit.jupiter.api.DisplayName;
@@ -13,6 +14,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,6 +29,8 @@ public class ProductControllerTest {
     private MockMvc mvc;
     @Autowired
     private ProductService productService;
+    @Autowired
+    private AdminProductService adminProductService;
 
     @Test
     @DisplayName("사용자 상품조회")
@@ -35,6 +40,22 @@ public class ProductControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
                 .andExpect(jsonPath("$.data").isArray());
+    }
+
+    @Test
+    @DisplayName("사용자 상품조회에서 판매중지 상품 제외")
+    void stoppedProductIsHidden() throws Exception {
+        Product product = adminProductService.save(
+                "판매중지 상품",
+                10000,
+                "사용자 목록에 노출되지 않는 상품",
+                "http://test.com/stopped.jpg"
+        );
+        adminProductService.updateSalesStatus(product.getId(), false);
+
+        mvc.perform(get("/api/products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data[*].name", not(hasItem("판매중지 상품"))));
     }
 
 }
