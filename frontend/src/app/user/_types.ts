@@ -12,7 +12,7 @@ export interface CartItem {
   quantity: number;
 }
 
-export type OrderStatus = 'ORDERED' | 'SHIPPED';
+export type OrderStatus = 'ORDERED' | 'CONFIRMED' | 'PREPARING_SHIPMENT' | 'SHIPPED' | 'DELIVERED' | 'CANCELED';
 
 export interface ApiProduct {
   id: number;
