@@ -156,8 +156,8 @@ public class AdminOrderControllerTest {
                 .andExpect(jsonPath("$.data.length()", greaterThanOrEqualTo(2)))
                 .andExpect(jsonPath("$.data[*].email", hasItem("today@test.com")))
                 .andExpect(jsonPath("$.data[*].email", hasItem("shipped@test.com")))
+                .andExpect(jsonPath("$.data[*].email", hasItem("delivered@test.com")))
                 .andExpect(jsonPath("$.data[*].email", not(hasItem("tomorrow@test.com"))))
-                .andExpect(jsonPath("$.data[*].email", not(hasItem("delivered@test.com"))))
                 .andExpect(jsonPath("$.data[*].email", not(hasItem("canceled@test.com"))));
     }
 
