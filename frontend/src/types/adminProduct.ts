@@ -4,6 +4,7 @@ export type AdminProductResponse = {
   price: number;
   description: string;
   imageUrl: string;
+  selling: boolean;
 };
 
 export type AdminProductDetailResponse = AdminProductResponse & {
@@ -16,4 +17,8 @@ export type AdminProductRequest = {
   price: number;
   description: string;
   imageUrl: string;
+};
+
+export type AdminProductSalesStatusRequest = {
+  selling: boolean;
 };

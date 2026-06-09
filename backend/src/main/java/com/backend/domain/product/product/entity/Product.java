@@ -23,6 +23,9 @@ public class Product extends BaseEntity{
     @Column(length = 500)
     private String imageUrl;
 
+    @Column(nullable = false)
+    private boolean selling = true;
+
     public Product(String name, int price, String description, String imageUrl){
         this.name = name;
         this.price = price;
@@ -35,5 +38,9 @@ public class Product extends BaseEntity{
         this.price = price;
         this.description = description;
         this.imageUrl = imageUrl;
+    }
+
+    public void updateSelling(boolean selling) {
+        this.selling = selling;
     }
 }

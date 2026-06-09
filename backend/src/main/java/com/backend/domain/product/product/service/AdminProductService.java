@@ -17,11 +17,6 @@ public class AdminProductService {
 
     }
 
-    public void delete(Long id) {
-        findById(id); // 존재하지 않으면 IllegalArgumentException → 404
-        productRepository.deleteById(id);
-    }
-
     public Product findById(Long id) {
         return productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. id=" + id));
@@ -30,6 +25,12 @@ public class AdminProductService {
     public Product modify(Long id, String name, int price, String description, String imageUrl) {
         Product product = findById(id);
         product.modify(name, price, description, imageUrl);
+        return productRepository.save(product);
+    }
+
+    public Product updateSalesStatus(Long id, boolean selling) {
+        Product product = findById(id);
+        product.updateSelling(selling);
         return productRepository.save(product);
     }
 
