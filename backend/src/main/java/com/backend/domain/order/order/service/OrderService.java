@@ -46,6 +46,9 @@ public class OrderService {
         for (OrderItemRequest item : items) {
             Product product = productRepository.findById(item.productId())
                     .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다: " + item.productId()));
+            if (!product.isSelling()) {
+                throw new IllegalStateException("판매중지된 상품은 주문할 수 없습니다.");
+            }
             order.addUpdateOrderItem(product, item.quantity());
         }
         return orderRepository.save(order);
