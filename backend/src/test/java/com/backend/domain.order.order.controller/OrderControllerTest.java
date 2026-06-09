@@ -9,16 +9,22 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -41,12 +47,54 @@ public class OrderControllerTest {
     @Autowired
     private OrderRepository orderRepository;
 
+    @Autowired
+    private MutableClock clock;
+
     private Long orderdOrderId;
     private Long shippedOrderId;
     private Long productId;
 
+    @TestConfiguration
+    static class ClockTestConfig {
+        @Bean
+        @Primary
+        MutableClock mutableClock() {
+            return new MutableClock(ZoneId.of("Asia/Seoul"));
+        }
+    }
+
+    static class MutableClock extends Clock {
+        private final ZoneId zone;
+        private Instant instant;
+
+        MutableClock(ZoneId zone) {
+            this.zone = zone;
+            set(LocalDateTime.of(2026, 6, 9, 10, 0));
+        }
+
+        void set(LocalDateTime dateTime) {
+            this.instant = dateTime.atZone(zone).toInstant();
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return zone;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            return Clock.fixed(instant, zone);
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+    }
+
     @BeforeEach
    public void setUp(){
+        clock.set(LocalDateTime.of(2026, 6, 9, 10, 0));
 
         Product ethiopia = productRepository.save(new Product(
                 "에티오피아 예가체프",
@@ -83,15 +131,26 @@ public class OrderControllerTest {
            );
            shippedOrder.addUpdateOrderItem(ethiopia, 1);
            shippedOrder.updateStatus(OrderStatus.SHIPPED);
-           shippedOrderId = orderRepository.save(shippedOrder).getId();
-   }
+	           shippedOrderId = orderRepository.save(shippedOrder).getId();
+	   }
+
+    private String orderRequest(String email, String address, String zipcode) {
+        return """
+                {
+                   "email" : "%s",
+                   "address" : "%s",
+                   "zipcode": "%s",
+                   "items": [{"productId": %d, "quantity": 1}]
+                }
+                """.formatted(email, address, zipcode, productId);
+    }
 
     @Test
     @DisplayName("주문 목록 조회")
     void t1() throws Exception{
         ResultActions resultActions = mvc
                 .perform(
-                        get("/api/orders").param("email", "bean@test.com")
+                        get("/api/orders").param("email", "today@test.com")
 
                 )
                 .andDo(print());
@@ -101,10 +160,10 @@ public class OrderControllerTest {
                 .andExpect(handler().methodName("findByEmail"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.resultCode").value("200"))
-                .andExpect(jsonPath("$.data[0].orderId").exists())
-                .andExpect(jsonPath("$.data[0].email").value("bean@test.com"))
+                .andExpect(jsonPath("$.data[0].id").exists())
+                .andExpect(jsonPath("$.data[0].email").value("today@test.com"))
                 .andExpect(jsonPath("$.data[0].status").exists())
-                .andExpect(jsonPath("$.data[0].items").isArray());
+                .andExpect(jsonPath("$.data[0].orderItems").isArray());
 
     }
     @Test
@@ -157,16 +216,10 @@ public class OrderControllerTest {
     }
 
     @Test
-    @DisplayName("동일 조건 재주문 시 주문 합산")
+    @DisplayName("이메일, 주소, 우편번호, 배송예정일이 모두 같으면 같은 주문으로 합산")
     public void t5() throws Exception {
-        String requestBody = """
-                {
-                   "email" : "merge@test.com",
-                   "address" : "서울 종로구 종로 1",
-                   "zipcode": "03154",
-                   "items": [{"productId": %d, "quantity": 1}]
-                }
-                """.formatted(productId);
+        clock.set(LocalDateTime.of(2026, 6, 9, 13, 0));
+        String requestBody = orderRequest("merge@test.com", "서울 종로구 종로 1", "03154");
 
         ResultActions resultActions = mvc
                 .perform(post("/api/orders")
@@ -188,7 +241,8 @@ public class OrderControllerTest {
 
         mvc.perform(get("/api/orders").param("email", "merge@test.com"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.length()").value(1));
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].orderItems[0].quantity").value(2));
     }
 
     @Test
@@ -218,24 +272,11 @@ public class OrderControllerTest {
     }
 
     @Test
-    @DisplayName("같은 이메일 다른 주소 주문")
-    public void t6() throws Exception {
-        String requestBody1 = """
-                {
-                   "email" : "merge@test.com",
-                   "address" : "서울 종로구 종로 1",
-                   "zipcode": "03154",
-                   "items": [{"productId": %d, "quantity": 1}]
-                }
-                """.formatted(productId);
-        String requestBody2 = """
-                {
-                   "email" : "merge@test.com",
-                   "address" : "서울 종로구 종로 2",
-                   "zipcode": "03155",
-                   "items": [{"productId": %d, "quantity": 1}]
-                }
-                """.formatted(productId);
+    @DisplayName("이메일, 우편번호, 배송예정일이 같아도 주소가 다르면 다른 주문")
+    public void t6_addressDiffers() throws Exception {
+        clock.set(LocalDateTime.of(2026, 6, 9, 13, 0));
+        String requestBody1 = orderRequest("address-rule@test.com", "서울 종로구 종로 1", "03154");
+        String requestBody2 = orderRequest("address-rule@test.com", "서울 종로구 종로 2", "03154");
 
         ResultActions resultActions = mvc
                 .perform(post("/api/orders")
@@ -254,9 +295,81 @@ public class OrderControllerTest {
                         .content(requestBody2))
                 .andExpect(status().isOk());
 
-        mvc.perform(get("/api/orders").param("email", "merge@test.com"))
+        mvc.perform(get("/api/orders").param("email", "address-rule@test.com"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("이메일, 주소, 배송예정일이 같아도 우편번호가 다르면 다른 주문")
+    public void t6_zipcodeDiffers() throws Exception {
+        clock.set(LocalDateTime.of(2026, 6, 9, 13, 0));
+        String requestBody1 = orderRequest("zipcode-rule@test.com", "서울 종로구 종로 1", "03154");
+        String requestBody2 = orderRequest("zipcode-rule@test.com", "서울 종로구 종로 1", "03155");
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody1))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody2))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/orders").param("email", "zipcode-rule@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("주소, 우편번호, 배송예정일이 같아도 이메일이 다르면 다른 주문")
+    public void t6_emailDiffers() throws Exception {
+        clock.set(LocalDateTime.of(2026, 6, 9, 13, 0));
+        String address = "서울 종로구 종로 1";
+        String zipcode = "03154";
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(orderRequest("email-rule-a@test.com", address, zipcode)))
+                .andExpect(status().isOk());
+
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(orderRequest("email-rule-b@test.com", address, zipcode)))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/orders").param("email", "email-rule-a@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+
+        mvc.perform(get("/api/orders").param("email", "email-rule-b@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+    }
+
+    @Test
+    @DisplayName("이메일, 주소, 우편번호가 같아도 13시 59분 59초와 14시 정각은 다른 주문")
+    public void t7() throws Exception {
+        String requestBody = orderRequest("cutoff-rule@test.com", "서울 종로구 종로 1", "03154");
+
+        clock.set(LocalDateTime.of(2026, 6, 9, 13, 59, 59));
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        clock.set(LocalDateTime.of(2026, 6, 9, 14, 0));
+        mvc.perform(post("/api/orders")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/orders").param("email", "cutoff-rule@test.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2))
+                .andExpect(jsonPath("$.data[0].shippingDate").value("2026-06-09T00:00:00"))
+                .andExpect(jsonPath("$.data[1].shippingDate").value("2026-06-10T00:00:00"));
     }
 
 
