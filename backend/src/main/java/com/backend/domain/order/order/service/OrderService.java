@@ -68,7 +68,7 @@ public class OrderService {
        if (order.getStatus() != OrderStatus.ORDERED) {
            throw new IllegalStateException("주문완료 상태의 주문만 취소할 수 있습니다.");
        }
-       orderRepository.delete(order);
+       order.updateStatus(OrderStatus.CANCELED);
    }
    @Transactional
     public Order modify(Long id, String address, String zipcode) {
