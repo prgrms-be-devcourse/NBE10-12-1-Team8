@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,9 +19,10 @@ import java.util.List;
 public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final Clock clock;
 
     private LocalDateTime calculateShippingDate() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime cutoff = now.toLocalDate().atTime(14, 0);
         // 14:00:00까지는 당일 윈도우, 14:00:01부터 다음 윈도우
         return !now.isAfter(cutoff)
@@ -30,7 +32,7 @@ public class OrderService {
 
     @Transactional
     public Order save(String email, String address, String zipcode) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime shippingDate = calculateShippingDate();
         return orderRepository.save(new Order(email, shippingDate, address, zipcode, now));
     }
@@ -46,7 +48,7 @@ public class OrderService {
                     }
                     return existing;
                 })
-                .orElseGet(() -> new Order(email, shippingDate, address, zipcode, LocalDateTime.now()));
+                .orElseGet(() -> new Order(email, shippingDate, address, zipcode, LocalDateTime.now(clock)));
 
         for (OrderItemRequest item : items) {
             Product product = productRepository.findById(item.productId())
